@@ -1,4 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+
+from app.models.park import Park
+from app.parks import parks
+
 
 app = FastAPI(
     title="WakeCast API",
@@ -9,3 +13,20 @@ app = FastAPI(
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/api/parks", response_model=list[Park])
+def get_parks():
+    return parks
+
+
+@app.get("/api/parks/{slug}", response_model=Park)
+def get_park(slug: str):
+    for park in parks:
+        if park.slug == slug:
+            return park
+
+    raise HTTPException(
+        status_code=404,
+        detail="Park not found",
+    )
