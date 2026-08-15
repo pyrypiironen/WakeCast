@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 
 from app.models.park import Park
+from app.models.weather import WeatherResponse
 from app.parks import parks
 from app.services.fmi import get_forecast
 
@@ -33,7 +34,10 @@ def get_park(slug: str):
     )
 
 
-@app.get("/api/parks/{slug}/weather")
+@app.get(
+    "/api/parks/{slug}/weather",
+    response_model=WeatherResponse,
+)
 def get_park_weather(slug: str):
     for park in parks:
         if park.slug == slug:

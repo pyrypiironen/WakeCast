@@ -14,3 +14,8 @@ class WeatherForecast(BaseModel):
     precipitation: float
     precipitation_probability: float
     cloudiness: float
+
+
+class WeatherResponse(BaseModel):
+    forecast_location: str
+    forecasts: list[WeatherForecast]
