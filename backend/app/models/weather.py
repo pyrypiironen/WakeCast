@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
+
 
 
 class WeatherForecast(BaseModel):
@@ -12,8 +14,10 @@ class WeatherForecast(BaseModel):
     wind_direction: float
 
     precipitation: float
-    precipitation_probability: float
+    precipitation_probability: float | None = None
     cloudiness: float
+
+    source: Literal["harmonie", "ecmwf"]
 
 
 class WeatherResponse(BaseModel):

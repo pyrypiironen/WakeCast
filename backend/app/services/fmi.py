@@ -7,6 +7,7 @@ from app.models.weather import WeatherForecast, WeatherResponse
 
 
 FMI_URL = "https://opendata.fmi.fi/wfs"
+OPEN_METEO_ECMWF_URL = "https://api.open-meteo.com/v1/ecmwf"
 
 FMI_FORECAST_QUERY = (
     "fmi::forecast::edited::weather::scandinavia::point::multipointcoverage"
@@ -21,7 +22,18 @@ NAMESPACES = {
 }
 
 
-FIELD_MAP = {
+#FIELD_MAP = {
+#    "Temperature": "temperature",
+#    "WindSpeedMS": "wind_speed",
+#    "HourlyMaximumGust": "wind_gust",
+#    "WindDirection": "wind_direction",
+#    "Precipitation1h": "precipitation",
+#    "PoP": "precipitation_probability",
+#    "TotalCloudCover": "cloudiness",
+#}
+
+
+HARMONIE_FIELD_MAP = {
     "Temperature": "temperature",
     "WindSpeedMS": "wind_speed",
     "HourlyMaximumGust": "wind_gust",
@@ -32,7 +44,17 @@ FIELD_MAP = {
 }
 
 
-def get_forecast(
+ECMWF_FIELD_MAP = {
+    "temperature_2m": "temperature",
+    "wind_speed_10m": "wind_speed",
+    "wind_gusts_10m": "wind_gust",
+    "wind_direction_10m": "wind_direction",
+    "precipitation": "precipitation",
+    "cloud_cover": "cloudiness",
+}
+
+
+def get_harmonie_forecast(
     latitude: float,
     longitude: float,
 ) -> WeatherResponse:
@@ -52,10 +74,90 @@ def get_forecast(
 
     response.raise_for_status()
 
-    return parse_forecast(response.text)
+    return parse_forecast(
+    response.text,
+    HARMONIE_FIELD_MAP,
+    source="harmonie",
+)
 
 
-def parse_forecast(xml_text: str) -> WeatherResponse:
+def get_ecmwf_forecast(
+    latitude: float,
+    longitude: float,
+) -> WeatherResponse:
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": ",".join(ECMWF_FIELD_MAP.keys()),
+        "wind_speed_unit": "ms",
+        "forecast_days": 10,
+        "timezone": "UTC",
+    }
+
+    response = httpx.get(
+        OPEN_METEO_ECMWF_URL,
+        params=params,
+        timeout=30.0,
+    )
+
+    response.raise_for_status()
+
+    return parse_ecmwf_forecast(response.json())
+
+
+def merge_forecasts(
+    harmonie: WeatherResponse,
+    ecmwf: WeatherResponse,
+) -> WeatherResponse:
+    forecasts_by_timestamp = {
+        forecast.timestamp: forecast
+        for forecast in ecmwf.forecasts
+    }
+
+    for forecast in harmonie.forecasts:
+        forecasts_by_timestamp[forecast.timestamp] = forecast
+
+    merged_forecasts = sorted(
+        forecasts_by_timestamp.values(),
+        key=lambda forecast: forecast.timestamp,
+    )
+
+    forecast_location = harmonie.forecast_location
+
+    if forecast_location == "Unknown":
+        forecast_location = ecmwf.forecast_location
+
+    return WeatherResponse(
+        forecast_location=forecast_location,
+        forecasts=merged_forecasts,
+    )
+
+
+def get_forecast(
+    latitude: float,
+    longitude: float,
+) -> WeatherResponse:
+    harmonie = get_harmonie_forecast(
+        latitude,
+        longitude,
+    )
+
+    ecmwf = get_ecmwf_forecast(
+        latitude,
+        longitude,
+    )
+
+    return merge_forecasts(
+        harmonie,
+        ecmwf,
+    )
+
+
+def parse_forecast(
+    xml_text: str,
+    field_map: dict[str, str],
+    source: str = "harmonie",
+) -> WeatherResponse:
     root = ET.fromstring(xml_text)
 
     location_element = root.find(
@@ -126,7 +228,7 @@ def parse_forecast(xml_text: str) -> WeatherResponse:
 
         values = {}
 
-        for fmi_name, wakecast_name in FIELD_MAP.items():
+        for fmi_name, wakecast_name in field_map.items():
             raw_value = raw_data.get(fmi_name)
 
             if raw_value is None or raw_value == "NaN":
@@ -138,6 +240,7 @@ def parse_forecast(xml_text: str) -> WeatherResponse:
             forecasts.append(
                 WeatherForecast(
                     timestamp=timestamp,
+                    source=source,
                     **values,
                 )
             )
@@ -146,3 +249,54 @@ def parse_forecast(xml_text: str) -> WeatherResponse:
         forecast_location=forecast_location,
         forecasts=forecasts,
     )
+
+
+def parse_ecmwf_forecast(
+    data: dict,
+) -> WeatherResponse:
+    hourly = data.get("hourly")
+
+    if hourly is None:
+        return WeatherResponse(
+            forecast_location="Unknown",
+            forecasts=[],
+        )
+
+    timestamps = hourly.get("time", [])
+
+    forecasts = []
+
+    for index, timestamp_text in enumerate(timestamps):
+        values = {}
+
+        for open_meteo_name, wakecast_name in ECMWF_FIELD_MAP.items():
+            field_values = hourly.get(open_meteo_name)
+
+            if (
+                field_values is None
+                or index >= len(field_values)
+                or field_values[index] is None
+            ):
+                break
+
+            values[wakecast_name] = float(field_values[index])
+
+        else:
+            timestamp = datetime.fromisoformat(
+                timestamp_text
+            ).replace(tzinfo=timezone.utc)
+
+            forecasts.append(
+                WeatherForecast(
+                    timestamp=timestamp,
+                    source="ecmwf",
+                    precipitation_probability=None,
+                    **values,
+                )
+            )
+
+    return WeatherResponse(
+        forecast_location="Unknown",
+        forecasts=forecasts,
+    )
+
