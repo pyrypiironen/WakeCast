@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 
 from app.models.park import Park
 from app.parks import parks
+from app.services.fmi import get_forecast
 
 
 app = FastAPI(
@@ -25,6 +26,21 @@ def get_park(slug: str):
     for park in parks:
         if park.slug == slug:
             return park
+
+    raise HTTPException(
+        status_code=404,
+        detail="Park not found",
+    )
+
+
+@app.get("/api/parks/{slug}/weather")
+def get_park_weather(slug: str):
+    for park in parks:
+        if park.slug == slug:
+            return get_forecast(
+                latitude=park.latitude,
+                longitude=park.longitude,
+            )
 
     raise HTTPException(
         status_code=404,
