@@ -23,10 +23,11 @@ class WeatherForecastDB(Base):
     )
 
     fetched_at: Mapped[datetime] = mapped_column(
-    DateTime(timezone=True),
-    index=True,
+        DateTime(timezone=True),
+        index=True,
     )
 
+    forecast_location: Mapped[str] = mapped_column(String(100))
     temperature: Mapped[float] = mapped_column(Float)
     wind_speed: Mapped[float] = mapped_column(Float)
     wind_gust: Mapped[float] = mapped_column(Float)
