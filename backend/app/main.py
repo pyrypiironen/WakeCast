@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
@@ -5,14 +7,27 @@ from app.database import get_db
 from app.models.park import Park
 from app.models.park_db import ParkDB
 from app.models.weather import WeatherForecast, WeatherResponse
+from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
-from app.services.weather_storage import get_latest_forecast_snapshot
+from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
 
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.start()
+
+    try:
+        yield
+    finally:
+        scheduler.shutdown()
 
 
 app = FastAPI(
     title="WakeCast API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -73,8 +88,14 @@ def get_park_weather(
 
     if not rows:
         raise HTTPException(
-           status_code=404,
-           detail="Weather forecast not found",
+            status_code=404,
+            detail="Weather forecast not found",
+        )
+    
+    if not is_forecast_snapshot_fresh(rows):
+        raise HTTPException(
+            status_code=503,
+            detail="Weather forecast is stale",
         )
 
     forecasts = [

@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.weather import WeatherResponse
@@ -62,3 +62,57 @@ def get_latest_forecast_snapshot(
     )
 
 
+def is_forecast_snapshot_fresh(
+    rows: list[WeatherForecastDB],
+    max_age_minutes: int = 30,
+) -> bool:
+    if not rows:
+        return False
+
+    fetched_at = rows[0].fetched_at
+    now = datetime.now(timezone.utc)
+
+    return now - fetched_at <= timedelta(minutes=max_age_minutes)
+
+
+def cleanup_old_forecast_snapshots(
+    db: Session,
+    park_id: int,
+    full_history_days: int = 7,
+) -> int:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=full_history_days)
+
+    hourly_snapshots = (
+        db.query(
+            func.min(WeatherForecastDB.fetched_at).label("keep_fetched_at")
+        )
+        .filter(
+            WeatherForecastDB.park_id == park_id,
+            WeatherForecastDB.fetched_at < cutoff,
+        )
+        .group_by(
+            func.date_trunc(
+                "hour",
+                WeatherForecastDB.fetched_at,
+            )
+        )
+        .subquery()
+    )
+
+    deleted_rows = (
+        db.query(WeatherForecastDB)
+        .filter(
+            WeatherForecastDB.park_id == park_id,
+            WeatherForecastDB.fetched_at < cutoff,
+            ~WeatherForecastDB.fetched_at.in_(
+                select(hourly_snapshots.c.keep_fetched_at)
+            ),
+        )
+        .delete(
+            synchronize_session=False,
+        )
+    )
+
+    db.commit()
+
+    return deleted_rows
