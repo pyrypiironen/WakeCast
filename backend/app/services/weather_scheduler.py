@@ -2,11 +2,15 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.database import SessionLocal
 from app.models.park_db import ParkDB
+from app.models.weather_db import WeatherStationDB
 from app.services.weather_refresh import (
+    refresh_observations,
     refresh_park_forecast,
-    refresh_park_observations,
 )
-from app.services.weather_storage import cleanup_old_forecast_snapshots
+from app.services.weather_storage import (
+    cleanup_old_forecast_snapshots,
+    cleanup_old_observations,
+)
 
 
 def refresh_all_active_parks() -> None:
@@ -33,27 +37,40 @@ def refresh_all_active_parks() -> None:
         db.close()
 
 
-def refresh_laguuni_observations() -> None:
+def refresh_all_active_weather_stations() -> None:
     db = SessionLocal()
 
     try:
-        park = (
-            db.query(ParkDB)
-            .filter(
-                ParkDB.id == 1,
-                ParkDB.is_active.is_(True),
+        stations = (
+            db.query(WeatherStationDB)
+            .filter(WeatherStationDB.is_active.is_(True))
+            .all()
+        )
+
+        for station in stations:
+            refresh_observations(
+                db=db,
+                station=station,
             )
-            .one_or_none()
+    finally:
+        db.close()
+
+
+def cleanup_all_active_weather_stations() -> None:
+    db = SessionLocal()
+
+    try:
+        stations = (
+            db.query(WeatherStationDB)
+            .filter(WeatherStationDB.is_active.is_(True))
+            .all()
         )
 
-        if park is None:
-            return
-
-        refresh_park_observations(
-            db=db,
-            park=park,
-            station_id=874863,
-        )
+        for station in stations:
+            cleanup_old_observations(
+                db=db,
+                weather_station_id=station.id,
+            )
     finally:
         db.close()
 
@@ -71,9 +88,20 @@ scheduler.add_job(
 )
 
 scheduler.add_job(
-    refresh_laguuni_observations,
+    refresh_all_active_weather_stations,
     trigger="interval",
     minutes=10,
     id="refresh_weather_observations",
     replace_existing=True,
 )
+
+scheduler.add_job(
+    cleanup_all_active_weather_stations,
+    trigger="cron",
+    hour=3,
+    minute=0,
+    id="cleanup_weather_observations",
+    replace_existing=True,
+)
+
+

@@ -45,24 +45,37 @@ class WeatherForecastDB(Base):
     park: Mapped["ParkDB"] = relationship()
 
 
+class WeatherStationDB(Base):
+    __tablename__ = "weather_stations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    name: Mapped[str] = mapped_column(String(100))
+    region: Mapped[str] = mapped_column(
+        String(100),
+        index=True,
+    )
+
+    source: Mapped[str] = mapped_column(String(20))
+    source_station_id: Mapped[int] = mapped_column(
+        unique=True,
+        index=True,
+    )
+
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+
 class WeatherObservationDB(Base):
     __tablename__ = "weather_observations"
-    
     __table_args__ = (
         UniqueConstraint(
-            "park_id",
-            "observation_station_id",
+            "weather_station_id",
             "timestamp",
-            name="uq_weather_observations_park_station_timestamp",
+            name="uq_weather_observations_station_timestamp",
         ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-
-    park_id: Mapped[int] = mapped_column(
-        ForeignKey("parks.id"),
-        index=True,
-    )
 
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -75,7 +88,10 @@ class WeatherObservationDB(Base):
     )
 
     observation_location: Mapped[str] = mapped_column(String(100))
-    observation_station_id: Mapped[int] = mapped_column()
+    weather_station_id: Mapped[int] = mapped_column(
+        ForeignKey("weather_stations.id"),
+        index=True,
+    )
 
     temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
     wind_speed: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -84,7 +100,17 @@ class WeatherObservationDB(Base):
 
     precipitation: Mapped[float | None] = mapped_column(Float, nullable=True)
     cloudiness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    water_temperature: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    resolution_minutes: Mapped[int | None] = mapped_column(
+        nullable=True,
+    )
+    is_aggregated: Mapped[bool] = mapped_column(
+        default=False,
+    )
 
     source: Mapped[str] = mapped_column(String(20))
-
-    park: Mapped["ParkDB"] = relationship()
+    weather_station: Mapped["WeatherStationDB"] = relationship()

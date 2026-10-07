@@ -31,6 +31,8 @@ NAMESPACES = {
 
 def get_observations(
     station_id: int,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
 ) -> WeatherObservationResponse:
     params = {
         "service": "WFS",
@@ -41,10 +43,16 @@ def get_observations(
         "parameters": ",".join(OBSERVATION_FIELD_MAP.keys()),
     }
 
+    if start_time is not None:
+        params["starttime"] = start_time.isoformat()
+
+    if end_time is not None:
+        params["endtime"] = end_time.isoformat()
+
     response = httpx.get(
         FMI_URL,
         params=params,
-        timeout=10.0,
+        timeout=30.0,
     )
 
     response.raise_for_status()
@@ -155,3 +163,30 @@ def parse_observations(
         observation_station_id=station_id,
         observations=observations,
     )
+
+
+def get_observation_resolution_minutes(
+    weather: WeatherObservationResponse,
+) -> int | None:
+    if len(weather.observations) < 2:
+        return None
+
+    intervals = [
+        int(
+            (
+                current.timestamp - previous.timestamp
+            ).total_seconds()
+            // 60
+        )
+        for previous, current in zip(
+            weather.observations,
+            weather.observations[1:],
+        )
+    ]
+
+    if not intervals:
+        return None
+
+    return min(intervals)
+
+
