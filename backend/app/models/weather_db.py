@@ -43,3 +43,39 @@ class WeatherForecastDB(Base):
     source: Mapped[str] = mapped_column(String(20))
 
     park: Mapped["ParkDB"] = relationship()
+
+
+class WeatherObservationDB(Base):
+    __tablename__ = "weather_observations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    park_id: Mapped[int] = mapped_column(
+        ForeignKey("parks.id"),
+        index=True,
+    )
+
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        index=True,
+    )
+
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        index=True,
+    )
+
+    observation_location: Mapped[str] = mapped_column(String(100))
+    observation_station_id: Mapped[int] = mapped_column()
+
+    temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
+    wind_speed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    wind_gust: Mapped[float | None] = mapped_column(Float, nullable=True)
+    wind_direction: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    precipitation: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cloudiness: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    source: Mapped[str] = mapped_column(String(20))
+
+    park: Mapped["ParkDB"] = relationship()

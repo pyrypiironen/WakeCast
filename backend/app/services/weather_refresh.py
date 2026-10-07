@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.park_db import ParkDB
-from app.services.fmi import get_forecast
+from app.services.weather_forecast import get_forecast
 from app.services.weather_storage import save_forecast_snapshot
 
 
