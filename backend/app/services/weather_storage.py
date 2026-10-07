@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.models.weather import WeatherResponse
-from app.models.weather_db import WeatherForecastDB
+from app.models.weather import WeatherObservationResponse, WeatherResponse
+from app.models.weather_db import WeatherForecastDB, WeatherObservationDB
 
 
 def save_forecast_snapshot(
@@ -36,6 +37,51 @@ def save_forecast_snapshot(
     db.commit()
 
     return len(rows)
+
+
+def save_observations(
+    db: Session,
+    park_id: int,
+    weather: WeatherObservationResponse,
+) -> int:
+    fetched_at = datetime.now(timezone.utc)
+
+    rows = [
+        {
+            "park_id": park_id,
+            "timestamp": observation.timestamp,
+            "fetched_at": fetched_at,
+            "observation_location": weather.observation_location,
+            "observation_station_id": weather.observation_station_id,
+            "temperature": observation.temperature,
+            "wind_speed": observation.wind_speed,
+            "wind_gust": observation.wind_gust,
+            "wind_direction": observation.wind_direction,
+            "precipitation": observation.precipitation,
+            "cloudiness": observation.cloudiness,
+            "source": "fmi",
+        }
+        for observation in weather.observations
+    ]
+
+    if not rows:
+        return 0
+
+    statement = (
+        insert(WeatherObservationDB)
+        .values(rows)
+        .on_conflict_do_nothing(
+            constraint="uq_weather_observations_park_station_timestamp",
+        )
+        .returning(WeatherObservationDB.id)
+    )
+
+    result = db.execute(statement)
+    inserted_ids = result.scalars().all()
+
+    db.commit()
+
+    return len(inserted_ids)
 
 
 def get_latest_forecast_snapshot(

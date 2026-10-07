@@ -12,8 +12,6 @@ from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
 
 
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler.start()
