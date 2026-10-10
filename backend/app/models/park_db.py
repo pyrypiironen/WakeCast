@@ -1,7 +1,15 @@
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.weather_db import WeatherStationDB
 
 
 class ParkDB(Base):
@@ -25,7 +33,18 @@ class ParkDB(Base):
     timezone: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    cables: Mapped[list["CableDB"]] = relationship(
+    observation_station_id: Mapped[int | None] = mapped_column(
+        ForeignKey("weather_stations.id"),
+        nullable=True,
+        index=True,
+    )
+
+    observation_station: Mapped[WeatherStationDB | None] = relationship(
+        "WeatherStationDB",
+        foreign_keys=[observation_station_id],
+    )
+
+    cables: Mapped[list[CableDB]] = relationship(
         back_populates="park",
         cascade="all, delete-orphan",
     )
@@ -45,6 +64,6 @@ class CableDB(Base):
 
     booking_url: Mapped[str] = mapped_column(String(500))
 
-    park: Mapped["ParkDB"] = relationship(
+    park: Mapped[ParkDB] = relationship(
         back_populates="cables",
     )
