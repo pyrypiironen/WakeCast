@@ -1,4 +1,3 @@
-
 from sqlalchemy import select
 
 from app.models.weather_db import WeatherStationDB

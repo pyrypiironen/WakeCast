@@ -1,3 +1,6 @@
+
+import logging
+
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.database import SessionLocal
@@ -13,6 +16,9 @@ from app.services.weather_storage import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def refresh_all_active_parks() -> None:
     db = SessionLocal()
 
@@ -24,17 +30,25 @@ def refresh_all_active_parks() -> None:
         )
 
         for park in parks:
-            refresh_park_forecast(
-                db=db,
-                park=park,
-            )
+            try:
+                refresh_park_forecast(
+                    db=db,
+                    park=park,
+                )
 
-            cleanup_old_forecast_snapshots(
-                db=db,
-                park_id=park.id,
-            )
+                cleanup_old_forecast_snapshots(
+                    db=db,
+                    park_id=park.id,
+                )
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "Weather refresh failed for park %s",
+                    park.slug,
+                )
     finally:
         db.close()
+
 
 
 def refresh_all_active_weather_stations() -> None:
@@ -48,12 +62,21 @@ def refresh_all_active_weather_stations() -> None:
         )
 
         for station in stations:
-            refresh_observations(
-                db=db,
-                station=station,
-            )
+            try:
+                refresh_observations(
+                    db=db,
+                    station=station,
+                )
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "Weather observation refresh failed for station %s",
+                    station.id,
+                )
     finally:
         db.close()
+
+
 
 
 def cleanup_all_active_weather_stations() -> None:
@@ -67,12 +90,20 @@ def cleanup_all_active_weather_stations() -> None:
         )
 
         for station in stations:
-            cleanup_old_observations(
-                db=db,
-                weather_station_id=station.id,
-            )
+            try:
+                cleanup_old_observations(
+                    db=db,
+                    weather_station_id=station.id,
+                )
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "Weather observation cleanup failed for station %s",
+                    station.id,
+                )
     finally:
         db.close()
+
 
 
 scheduler = BackgroundScheduler(
@@ -103,5 +134,3 @@ scheduler.add_job(
     id="cleanup_weather_observations",
     replace_existing=True,
 )
-
-

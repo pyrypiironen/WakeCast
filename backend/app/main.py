@@ -1,7 +1,10 @@
+import logging
+
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import get_db
 from app.models.park import Park
@@ -10,6 +13,9 @@ from app.models.weather import WeatherForecast, WeatherResponse
 from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
+
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -117,6 +123,7 @@ def get_park_weather(
     )
 
 
+
 @app.post("/api/parks/{slug}/weather/refresh")
 def refresh_park_weather(
     slug: str,
@@ -134,14 +141,36 @@ def refresh_park_weather(
             detail="Park not found",
         )
 
-    saved_rows = refresh_park_forecast(
-        db=db,
-        park=park,
-    )
+    try:
+        saved_rows = refresh_park_forecast(
+            db=db,
+            park=park,
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception(
+            "Database error refreshing weather for park %s",
+            slug,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Weather refresh failed",
+        )
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "Weather refresh failed for park %s",
+            slug,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Weather forecast provider unavailable",
+        )
 
     return {
         "status": "ok",
         "saved_rows": saved_rows,
     }
+
 
 

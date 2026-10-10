@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.services.weather_comparison import get_lead_time_bucket
