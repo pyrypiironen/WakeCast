@@ -86,7 +86,6 @@ def save_observations(
                 "wind_direction": insert_statement.excluded.wind_direction,
                 "precipitation": insert_statement.excluded.precipitation,
                 "cloudiness": insert_statement.excluded.cloudiness,
-                "water_temperature": insert_statement.excluded.water_temperature,
                 "resolution_minutes": insert_statement.excluded.resolution_minutes,
                 "is_aggregated": insert_statement.excluded.is_aggregated,
                 "source": insert_statement.excluded.source,
