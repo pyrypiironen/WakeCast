@@ -11,7 +11,6 @@ from app.models.water_temperature_db import (
     WaterTemperatureStationDB,
 )
 
-
 URL = "/api/parks/water-api-test-park/water-temperature"
 
 

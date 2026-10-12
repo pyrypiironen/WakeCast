@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from app import main
 from app.database import get_db
 
-
 REFRESH_URL = "/api/parks/security-test-park/weather/refresh"
 
 

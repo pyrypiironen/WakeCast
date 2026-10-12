@@ -5,7 +5,6 @@ import httpx
 from app.models.weather import WeatherForecast, WeatherResponse
 from app.services.weather_errors import WeatherProviderError
 
-
 OPEN_METEO_ECMWF_URL = "https://api.open-meteo.com/v1/ecmwf"
 
 ECMWF_FIELD_MAP = {

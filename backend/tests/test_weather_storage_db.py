@@ -2,11 +2,13 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 
+from app.models.park_db import ParkDB
 from app.models.weather import (
     WeatherObservation,
     WeatherObservationResponse,
 )
 from app.models.weather_db import (
+    WeatherForecastDB,
     WeatherObservationDB,
     WeatherStationDB,
 )
@@ -15,8 +17,6 @@ from app.services.weather_storage import (
     cleanup_old_observations,
     save_observations,
 )
-from app.models.park_db import ParkDB
-from app.models.weather_db import WeatherForecastDB
 
 
 def test_save_observations_upsert(db):

@@ -4,7 +4,6 @@ from app.database import SessionLocal
 from app.models.weather_db import WeatherStationDB
 from app.services.weather_history import backfill_observations
 
-
 START_YEAR = 2026
 END_YEAR = 2026
 

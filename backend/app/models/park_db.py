@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from app.models.weather_db import WeatherStationDB
     from app.models.water_temperature_db import WaterTemperatureStationDB
+    from app.models.weather_db import WeatherStationDB
 
 
 class ParkDB(Base):

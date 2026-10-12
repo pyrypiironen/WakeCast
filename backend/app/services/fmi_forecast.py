@@ -1,11 +1,10 @@
-from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 import httpx
 
 from app.models.weather import WeatherForecast, WeatherResponse
 from app.services.weather_errors import WeatherProviderError
-
 
 FMI_URL = "https://opendata.fmi.fi/wfs"
 

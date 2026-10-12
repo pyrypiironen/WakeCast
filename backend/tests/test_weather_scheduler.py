@@ -6,8 +6,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.services.weather_scheduler import (
     cleanup_all_active_weather_stations,
     refresh_all_active_parks,
-    refresh_all_active_weather_stations,
     refresh_all_active_water_temperature_stations,
+    refresh_all_active_weather_stations,
     scheduler,
 )
 

@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from app.models.weather import WeatherForecast, WeatherObservation
 
-
 WEATHER_FIELDS = [
     "temperature",
     "wind_speed",

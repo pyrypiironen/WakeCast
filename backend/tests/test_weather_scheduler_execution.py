@@ -1,9 +1,10 @@
-from app.models.park_db import ParkDB
-from app.services import weather_scheduler
-from app.models.weather_db import WeatherStationDB
 from unittest.mock import MagicMock
 
 import pytest
+
+from app.models.park_db import ParkDB
+from app.models.weather_db import WeatherStationDB
+from app.services import weather_scheduler
 
 
 def test_refresh_all_active_parks(db, monkeypatch):

@@ -4,7 +4,6 @@ import secrets
 from fastapi import Depends, HTTPException
 from fastapi.security import APIKeyHeader
 
-
 refresh_api_key_header = APIKeyHeader(
     name="X-API-Key",
     scheme_name="ManualRefreshAPIKey",

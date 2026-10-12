@@ -1,7 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
-
-from datetime import datetime, timedelta, timezone
 
 from app.database import get_db
 from app.main import app
@@ -276,6 +276,7 @@ def test_refresh_weather_provider_failure(client, db, monkeypatch):
 
 def test_refresh_weather_database_failure(client, db, monkeypatch):
     from sqlalchemy.exc import OperationalError
+
     from app import main
 
     park = ParkDB(

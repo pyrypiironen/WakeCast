@@ -1,5 +1,6 @@
-import pytest
 from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from app.models.park_db import ParkDB
 from app.models.weather_db import (

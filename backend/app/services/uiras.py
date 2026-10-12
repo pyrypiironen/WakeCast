@@ -6,7 +6,6 @@ from app.models.water_temperature import (
 )
 from app.services.weather_errors import WeatherProviderError
 
-
 UIRAS_URL = "https://iot.fvh.fi/opendata/uiras/uiras_latest.geojson"
 
 

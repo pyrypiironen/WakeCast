@@ -1,5 +1,4 @@
 import pytest
-
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
@@ -12,7 +11,6 @@ from app.models.weather_db import (
     WeatherObservationDB,
     WeatherStationDB,
 )
-
 
 TEST_DATABASE_URL = "postgresql+psycopg://pyry@localhost/wakecast_test"
 

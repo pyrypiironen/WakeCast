@@ -4,8 +4,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.database import SessionLocal
 from app.models.park_db import ParkDB
-from app.models.weather_db import WeatherStationDB
 from app.models.water_temperature_db import WaterTemperatureStationDB
+from app.models.weather_db import WeatherStationDB
 from app.services.water_temperature_refresh import refresh_water_temperature
 from app.services.weather_refresh import (
     refresh_observations,
@@ -15,7 +15,6 @@ from app.services.weather_storage import (
     cleanup_old_forecast_snapshots,
     cleanup_old_observations,
 )
-
 
 logger = logging.getLogger(__name__)
 

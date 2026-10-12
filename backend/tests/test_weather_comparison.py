@@ -1,6 +1,14 @@
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+
 import pytest
 
-from app.services.weather_comparison import get_lead_time_bucket
+from app.services.weather_comparison import (
+    ForecastObservationPair,
+    calculate_accuracy_metrics,
+    get_lead_time_bucket,
+    select_representative_pairs,
+)
 
 
 @pytest.mark.parametrize(
@@ -24,15 +32,6 @@ def test_lead_time_bucket(lead_time, expected_bucket):
     actual = bucket.name if bucket is not None else None
 
     assert actual == expected_bucket
-
-
-from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
-
-from app.services.weather_comparison import (
-    ForecastObservationPair,
-    select_representative_pairs,
-)
 
 
 def make_pair(
@@ -95,9 +94,6 @@ def test_keeps_observation_timestamps_separate():
     grouped = select_representative_pairs(pairs)
 
     assert len(grouped["0-3h"]) == 2
-
-
-from app.services.weather_comparison import calculate_accuracy_metrics
 
 
 def make_metric_pair(

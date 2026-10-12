@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 import httpx
 
@@ -7,7 +7,6 @@ from app.models.weather import (
     WeatherObservation,
     WeatherObservationResponse,
 )
-
 
 FMI_URL = "https://opendata.fmi.fi/wfs"
 FMI_OBSERVATION_QUERY = "fmi::observations::weather::multipointcoverage"

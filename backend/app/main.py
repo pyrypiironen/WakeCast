@@ -1,29 +1,27 @@
-from datetime import datetime, timedelta, timezone
 import logging
-
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.park import Park
 from app.models.park_db import ParkDB
-from app.models.weather import WeatherForecast, WeatherResponse
 from app.models.water_temperature import ParkWaterTemperatureResponse
+from app.models.weather import WeatherForecast, WeatherResponse
 from app.security import require_refresh_api_key
+from app.services.water_temperature_storage import (
+    get_latest_water_temperature_observation,
+)
 from app.services.weather_errors import WeatherProviderError
-from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
+from app.services.weather_scheduler import scheduler
 from app.services.weather_storage import (
     get_latest_forecast_snapshot,
     is_forecast_snapshot_fresh,
 )
-from app.services.water_temperature_storage import (
-    get_latest_water_temperature_observation,
-)
-
 
 logger = logging.getLogger(__name__)
 

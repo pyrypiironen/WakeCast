@@ -6,7 +6,6 @@ import pytest
 from app.services import uiras
 from app.services.weather_errors import WeatherProviderError
 
-
 STATION_ID = "70B3D57050004CDB"
 
 

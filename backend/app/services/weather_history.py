@@ -13,7 +13,6 @@ from app.services.fmi_observations import (
 )
 from app.services.weather_storage import save_observations
 
-
 RECENT_HISTORY_DAYS = 183
 
 
