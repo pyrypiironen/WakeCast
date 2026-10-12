@@ -16,9 +16,7 @@ def test_database_insert(db):
     db.flush()
 
     saved_station = db.scalar(
-        select(WeatherStationDB).where(
-            WeatherStationDB.source_station_id == 999999
-        )
+        select(WeatherStationDB).where(WeatherStationDB.source_station_id == 999999)
     )
 
     assert saved_station is not None
@@ -27,9 +25,7 @@ def test_database_insert(db):
 
 def test_database_rollback(db):
     station = db.scalar(
-        select(WeatherStationDB).where(
-            WeatherStationDB.source_station_id == 999999
-        )
+        select(WeatherStationDB).where(WeatherStationDB.source_station_id == 999999)
     )
 
     assert station is None

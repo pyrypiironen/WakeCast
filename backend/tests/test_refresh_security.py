@@ -150,17 +150,13 @@ def test_openapi_requires_key_only_for_manual_refresh(
     client, _, _ = security_client
     schema = client.get("/openapi.json").json()
 
-    refresh_operation = schema["paths"][
-        "/api/parks/{slug}/weather/refresh"
-    ]["post"]
+    refresh_operation = schema["paths"]["/api/parks/{slug}/weather/refresh"]["post"]
 
     assert refresh_operation["security"] == [
         {"ManualRefreshAPIKey": []},
     ]
 
-    assert schema["components"]["securitySchemes"][
-        "ManualRefreshAPIKey"
-    ] == {
+    assert schema["components"]["securitySchemes"]["ManualRefreshAPIKey"] == {
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key",
@@ -175,5 +171,3 @@ def test_openapi_requires_key_only_for_manual_refresh(
 
     for path in public_paths:
         assert "security" not in schema["paths"][path]["get"]
-
-

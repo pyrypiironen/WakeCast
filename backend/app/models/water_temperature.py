@@ -32,4 +32,3 @@ class ParkWaterTemperatureResponse(BaseModel):
 
     water_temperature: float = Field(allow_inf_nan=False)
     is_stale: bool
-

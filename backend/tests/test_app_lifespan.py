@@ -28,7 +28,6 @@ def test_scheduler_starts_and_stops_with_app(monkeypatch):
     mock_scheduler.shutdown.assert_called_once()
 
 
-
 def test_scheduler_startup_failure(monkeypatch):
     mock_scheduler = MagicMock()
 

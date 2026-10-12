@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class WeatherForecast(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
     timestamp: datetime
 
     temperature: float
@@ -25,6 +27,8 @@ class WeatherResponse(BaseModel):
 
 
 class WeatherObservation(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
     timestamp: datetime
 
     temperature: float | None = None

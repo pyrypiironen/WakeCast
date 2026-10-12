@@ -1,4 +1,3 @@
-
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -25,11 +24,7 @@ def refresh_all_active_parks() -> None:
     db = SessionLocal()
 
     try:
-        parks = (
-            db.query(ParkDB)
-            .filter(ParkDB.is_active.is_(True))
-            .all()
-        )
+        parks = db.query(ParkDB).filter(ParkDB.is_active.is_(True)).all()
 
         for park in parks:
             try:
@@ -50,7 +45,6 @@ def refresh_all_active_parks() -> None:
                 )
     finally:
         db.close()
-
 
 
 def refresh_all_active_weather_stations() -> None:
@@ -77,8 +71,6 @@ def refresh_all_active_weather_stations() -> None:
                 )
     finally:
         db.close()
-
-
 
 
 def cleanup_all_active_weather_stations() -> None:

@@ -50,9 +50,7 @@ def backfill_observations(
     end_time: datetime,
 ) -> int:
     if station.source != "fmi":
-        raise ValueError(
-            f"Unsupported weather station source: {station.source}"
-        )
+        raise ValueError(f"Unsupported weather station source: {station.source}")
 
     weather = get_observations(
         station_id=station.source_station_id,
@@ -74,10 +72,7 @@ def backfill_observations(
             is_aggregated=False,
         )
 
-    recent_cutoff = (
-        datetime.now(timezone.utc)
-        - timedelta(days=RECENT_HISTORY_DAYS)
-    )
+    recent_cutoff = datetime.now(timezone.utc) - timedelta(days=RECENT_HISTORY_DAYS)
 
     old_observations = [
         observation

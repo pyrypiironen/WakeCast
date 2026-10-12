@@ -8,8 +8,7 @@ def merge_forecasts(
     ecmwf: WeatherResponse,
 ) -> WeatherResponse:
     forecasts_by_timestamp = {
-        forecast.timestamp: forecast
-        for forecast in ecmwf.forecasts
+        forecast.timestamp: forecast for forecast in ecmwf.forecasts
     }
 
     for forecast in harmonie.forecasts:

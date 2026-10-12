@@ -19,9 +19,7 @@ def save_water_temperature_observations(
         station.source != weather.source
         or station.source_station_id != weather.source_station_id
     ):
-        raise ValueError(
-            "Water temperature response does not match the station"
-        )
+        raise ValueError("Water temperature response does not match the station")
 
     fetched_at = datetime.now(timezone.utc)
 
@@ -38,23 +36,15 @@ def save_water_temperature_observations(
     if not rows:
         return 0
 
-    insert_statement = insert(
-        WaterTemperatureObservationDB
-    ).values(rows)
+    insert_statement = insert(WaterTemperatureObservationDB).values(rows)
 
-    statement = (
-        insert_statement
-        .on_conflict_do_update(
-            constraint="uq_water_temperature_observations_station_timestamp",
-            set_={
-                "fetched_at": insert_statement.excluded.fetched_at,
-                "water_temperature": (
-                    insert_statement.excluded.water_temperature
-                ),
-            },
-        )
-        .returning(WaterTemperatureObservationDB.id)
-    )
+    statement = insert_statement.on_conflict_do_update(
+        constraint="uq_water_temperature_observations_station_timestamp",
+        set_={
+            "fetched_at": insert_statement.excluded.fetched_at,
+            "water_temperature": (insert_statement.excluded.water_temperature),
+        },
+    ).returning(WaterTemperatureObservationDB.id)
 
     result = db.execute(statement)
     saved_ids = result.scalars().all()
@@ -70,10 +60,8 @@ def get_latest_water_temperature_observation(
     return (
         db.query(WaterTemperatureObservationDB)
         .filter(
-            WaterTemperatureObservationDB.water_temperature_station_id
-            == station_id
+            WaterTemperatureObservationDB.water_temperature_station_id == station_id
         )
         .order_by(WaterTemperatureObservationDB.timestamp.desc())
         .first()
     )
-

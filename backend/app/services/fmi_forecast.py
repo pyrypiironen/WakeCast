@@ -51,9 +51,7 @@ def get_harmonie_forecast(
         )
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise WeatherProviderError(
-            "FMI forecast request failed"
-        ) from exc
+        raise WeatherProviderError("FMI forecast request failed") from exc
 
     try:
         weather = parse_forecast(
@@ -62,14 +60,10 @@ def get_harmonie_forecast(
             source="harmonie",
         )
     except (ET.ParseError, ValueError, KeyError, OverflowError) as exc:
-        raise WeatherProviderError(
-            "FMI returned invalid forecast data"
-        ) from exc
+        raise WeatherProviderError("FMI returned invalid forecast data") from exc
 
     if not weather.forecasts:
-        raise WeatherProviderError(
-            "FMI returned no usable forecast points"
-        )
+        raise WeatherProviderError("FMI returned no usable forecast points")
 
     return weather
 
@@ -96,10 +90,7 @@ def parse_forecast(
         NAMESPACES,
     )
 
-    field_names = [
-        element.attrib["name"]
-        for element in field_elements
-    ]
+    field_names = [element.attrib["name"] for element in field_elements]
 
     positions_element = root.find(
         ".//gmlcov:positions",
@@ -153,6 +144,10 @@ def parse_forecast(
             raw_value = raw_data.get(fmi_name)
 
             if raw_value is None or raw_value == "NaN":
+                if wakecast_name == "precipitation_probability":
+                    values[wakecast_name] = None
+                    continue
+
                 break
 
             values[wakecast_name] = float(raw_value)

@@ -34,8 +34,7 @@ def seed_database():
             db.query(WaterTemperatureStationDB)
             .filter(
                 WaterTemperatureStationDB.source == "uiras",
-                WaterTemperatureStationDB.source_station_id
-                == "70B3D57050004CDB",
+                WaterTemperatureStationDB.source_station_id == "70B3D57050004CDB",
             )
             .first()
         )
@@ -52,11 +51,7 @@ def seed_database():
             db.add(water_station)
             db.flush()
 
-        existing_park = (
-            db.query(ParkDB)
-            .filter(ParkDB.slug == "laguuni-keilis")
-            .first()
-        )
+        existing_park = db.query(ParkDB).filter(ParkDB.slug == "laguuni-keilis").first()
 
         if existing_park is None:
             park = ParkDB(
@@ -99,4 +94,3 @@ def seed_database():
 
 if __name__ == "__main__":
     seed_database()
-

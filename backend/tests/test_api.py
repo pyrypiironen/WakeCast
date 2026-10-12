@@ -16,6 +16,7 @@ def client(db, monkeypatch):
         "WEATHER_REFRESH_API_KEY",
         "test-refresh-api-key",
     )
+
     def override_get_db():
         yield db
 
@@ -66,7 +67,6 @@ def test_get_nonexistent_park(client):
     assert response.json()["detail"] == "Park not found"
 
 
-
 def test_get_park_weather_from_database(client, db):
     park = ParkDB(
         name="Weather API Test Park",
@@ -102,9 +102,7 @@ def test_get_park_weather_from_database(client, db):
     db.add(forecast)
     db.flush()
 
-    response = client.get(
-        "/api/parks/weather-api-test-park/weather"
-    )
+    response = client.get("/api/parks/weather-api-test-park/weather")
 
     assert response.status_code == 200
 
@@ -115,7 +113,6 @@ def test_get_park_weather_from_database(client, db):
     assert data["forecasts"][0]["temperature"] == 15.0
     assert data["forecasts"][0]["wind_speed"] == 5.0
     assert data["forecasts"][0]["source"] == "harmonie"
-
 
 
 def test_get_park_weather_without_forecast(client, db):
@@ -135,15 +132,10 @@ def test_get_park_weather_without_forecast(client, db):
     db.add(park)
     db.flush()
 
-    response = client.get(
-        "/api/parks/park-without-forecast/weather"
-    )
+    response = client.get("/api/parks/park-without-forecast/weather")
 
     assert response.status_code == 404
-    assert response.json() == {
-        "detail": "Weather forecast not found"
-    }
-
+    assert response.json() == {"detail": "Weather forecast not found"}
 
 
 def test_get_park_weather_stale_forecast(client, db):
@@ -181,27 +173,17 @@ def test_get_park_weather_stale_forecast(client, db):
     db.add(forecast)
     db.flush()
 
-    response = client.get(
-        "/api/parks/stale-weather-test-park/weather"
-    )
+    response = client.get("/api/parks/stale-weather-test-park/weather")
 
     assert response.status_code == 503
-    assert response.json() == {
-        "detail": "Weather forecast is stale"
-    }
-
+    assert response.json() == {"detail": "Weather forecast is stale"}
 
 
 def test_get_weather_nonexistent_park(client):
-    response = client.get(
-        "/api/parks/nonexistent-weather-test-park/weather"
-    )
+    response = client.get("/api/parks/nonexistent-weather-test-park/weather")
 
     assert response.status_code == 404
-    assert response.json() == {
-        "detail": "Park not found"
-    }
-
+    assert response.json() == {"detail": "Park not found"}
 
 
 def test_manual_forecast_refresh(client, db, monkeypatch):
@@ -232,9 +214,7 @@ def test_manual_forecast_refresh(client, db, monkeypatch):
         fake_refresh,
     )
 
-    response = client.post(
-        "/api/parks/refresh-api-test-park/weather/refresh"
-    )
+    response = client.post("/api/parks/refresh-api-test-park/weather/refresh")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -242,7 +222,6 @@ def test_manual_forecast_refresh(client, db, monkeypatch):
         "saved_rows": 12,
     }
     assert calls == [park.id]
-
 
 
 def test_manual_forecast_refresh_nonexistent_park(client, monkeypatch):
@@ -254,15 +233,10 @@ def test_manual_forecast_refresh_nonexistent_park(client, monkeypatch):
         fake_refresh,
     )
 
-    response = client.post(
-        "/api/parks/nonexistent-refresh-test-park/weather/refresh"
-    )
+    response = client.post("/api/parks/nonexistent-refresh-test-park/weather/refresh")
 
     assert response.status_code == 404
-    assert response.json() == {
-        "detail": "Park not found"
-    }
-
+    assert response.json() == {"detail": "Park not found"}
 
 
 def test_refresh_weather_provider_failure(client, db, monkeypatch):
@@ -293,14 +267,10 @@ def test_refresh_weather_provider_failure(client, db, monkeypatch):
         failing_refresh,
     )
 
-    response = client.post(
-        "/api/parks/provider-failure-park/weather/refresh"
-    )
+    response = client.post("/api/parks/provider-failure-park/weather/refresh")
 
     assert response.status_code == 502
-    assert response.json() == {
-        "detail": "Weather forecast provider unavailable"
-    }
+    assert response.json() == {"detail": "Weather forecast provider unavailable"}
     assert "Simulated FMI failure" not in response.text
 
 
@@ -337,14 +307,10 @@ def test_refresh_weather_database_failure(client, db, monkeypatch):
         failing_refresh,
     )
 
-    response = client.post(
-        "/api/parks/database-failure-park/weather/refresh"
-    )
+    response = client.post("/api/parks/database-failure-park/weather/refresh")
 
     assert response.status_code == 500
-    assert response.json() == {
-        "detail": "Weather refresh failed"
-    }
+    assert response.json() == {"detail": "Weather refresh failed"}
     assert "Simulated database failure" not in response.text
 
 
@@ -376,14 +342,8 @@ def test_refresh_weather_unexpected_failure(client, db, monkeypatch):
         failing_refresh,
     )
 
-    response = client.post(
-        "/api/parks/unexpected-failure-park/weather/refresh"
-    )
+    response = client.post("/api/parks/unexpected-failure-park/weather/refresh")
 
     assert response.status_code == 500
-    assert response.json() == {
-        "detail": "Weather refresh failed"
-    }
+    assert response.json() == {"detail": "Weather refresh failed"}
     assert "Simulated internal failure" not in response.text
-
-

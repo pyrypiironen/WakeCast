@@ -39,45 +39,32 @@ def get_ecmwf_forecast(
         )
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise WeatherProviderError(
-            "Open-Meteo ECMWF request failed"
-        ) from exc
+        raise WeatherProviderError("Open-Meteo ECMWF request failed") from exc
 
     try:
         data = response.json()
     except ValueError as exc:
-        raise WeatherProviderError(
-            "Open-Meteo ECMWF returned invalid JSON"
-        ) from exc
+        raise WeatherProviderError("Open-Meteo ECMWF returned invalid JSON") from exc
 
     if not isinstance(data, dict):
-        raise WeatherProviderError(
-            "Open-Meteo ECMWF returned an invalid response"
-        )
+        raise WeatherProviderError("Open-Meteo ECMWF returned an invalid response")
 
     hourly = data.get("hourly")
 
     if not isinstance(hourly, dict):
-        raise WeatherProviderError(
-            "Open-Meteo ECMWF returned no hourly data"
-        )
+        raise WeatherProviderError("Open-Meteo ECMWF returned no hourly data")
 
     timestamps = hourly.get("time")
 
     if not isinstance(timestamps, list) or not all(
-        isinstance(timestamp, str)
-        for timestamp in timestamps
+        isinstance(timestamp, str) for timestamp in timestamps
     ):
-        raise WeatherProviderError(
-            "Open-Meteo ECMWF returned invalid timestamps"
-        )
+        raise WeatherProviderError("Open-Meteo ECMWF returned invalid timestamps")
 
     for field_name in ECMWF_FIELD_MAP:
         field_values = hourly.get(field_name)
 
-        if not isinstance(field_values, list) or len(
-            field_values
-        ) != len(timestamps):
+        if not isinstance(field_values, list) or len(field_values) != len(timestamps):
             raise WeatherProviderError(
                 "Open-Meteo ECMWF returned invalid hourly fields"
             )
@@ -128,9 +115,9 @@ def parse_ecmwf_forecast(
             values[wakecast_name] = float(field_values[index])
 
         else:
-            timestamp = datetime.fromisoformat(
-                timestamp_text
-            ).replace(tzinfo=timezone.utc)
+            timestamp = datetime.fromisoformat(timestamp_text).replace(
+                tzinfo=timezone.utc
+            )
 
             forecasts.append(
                 WeatherForecast(

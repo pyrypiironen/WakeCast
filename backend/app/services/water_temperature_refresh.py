@@ -15,9 +15,7 @@ def refresh_water_temperature(
         return 0
 
     if station.source != "uiras":
-        raise ValueError(
-            f"Unsupported water temperature source: {station.source}"
-        )
+        raise ValueError(f"Unsupported water temperature source: {station.source}")
 
     weather = get_water_temperature(
         station_id=station.source_station_id,
@@ -28,4 +26,3 @@ def refresh_water_temperature(
         station=station,
         weather=weather,
     )
-

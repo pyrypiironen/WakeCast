@@ -73,4 +73,3 @@ class WaterTemperatureObservationDB(Base):
     station: Mapped[WaterTemperatureStationDB] = relationship(
         "WaterTemperatureStationDB",
     )
-

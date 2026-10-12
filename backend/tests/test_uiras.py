@@ -51,9 +51,7 @@ def test_parse_valid_measurement(sensor_data):
     observation = weather.observations[0]
 
     assert observation.water_temperature == 11.06
-    assert observation.timestamp.isoformat() == (
-        "2026-10-12T14:57:22+03:00"
-    )
+    assert observation.timestamp.isoformat() == ("2026-10-12T14:57:22+03:00")
 
 
 def test_selects_requested_sensor(sensor_data):

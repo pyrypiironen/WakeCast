@@ -221,14 +221,20 @@ def test_rejects_wrong_sensor(db, water_station):
             weather,
         )
 
-    assert get_latest_water_temperature_observation(
-        db,
-        water_station.id,
-    ) is None
+    assert (
+        get_latest_water_temperature_observation(
+            db,
+            water_station.id,
+        )
+        is None
+    )
 
 
 def test_no_measurement_for_station(db, water_station):
-    assert get_latest_water_temperature_observation(
-        db,
-        water_station.id,
-    ) is None
+    assert (
+        get_latest_water_temperature_observation(
+            db,
+            water_station.id,
+        )
+        is None
+    )

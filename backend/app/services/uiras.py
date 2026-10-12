@@ -20,16 +20,12 @@ def get_water_temperature(
         )
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise WeatherProviderError(
-            "UiRaS request failed"
-        ) from exc
+        raise WeatherProviderError("UiRaS request failed") from exc
 
     try:
         data = response.json()
     except ValueError as exc:
-        raise WeatherProviderError(
-            "UiRaS returned invalid JSON"
-        ) from exc
+        raise WeatherProviderError("UiRaS returned invalid JSON") from exc
 
     return parse_water_temperature(
         data,
@@ -42,27 +38,19 @@ def parse_water_temperature(
     station_id: str,
 ) -> WaterTemperatureResponse:
     if not isinstance(data, dict):
-        raise WeatherProviderError(
-            "UiRaS returned an invalid response"
-        )
+        raise WeatherProviderError("UiRaS returned an invalid response")
 
     if data.get("type") != "FeatureCollection":
-        raise WeatherProviderError(
-            "UiRaS returned an invalid GeoJSON collection"
-        )
+        raise WeatherProviderError("UiRaS returned an invalid GeoJSON collection")
 
     features = data.get("features")
 
     if not isinstance(features, list):
-        raise WeatherProviderError(
-            "UiRaS returned an invalid sensor list"
-        )
+        raise WeatherProviderError("UiRaS returned an invalid sensor list")
 
     for feature in features:
         if not isinstance(feature, dict):
-            raise WeatherProviderError(
-                "UiRaS returned an invalid sensor entry"
-            )
+            raise WeatherProviderError("UiRaS returned an invalid sensor entry")
 
         if feature.get("id") != station_id:
             continue
@@ -112,12 +100,8 @@ def parse_water_temperature(
                 observations=observations,
             )
         except (KeyError, TypeError, ValueError) as exc:
-            raise WeatherProviderError(
-                "UiRaS returned invalid sensor data"
-            ) from exc
+            raise WeatherProviderError("UiRaS returned invalid sensor data") from exc
 
     raise WeatherProviderError(
         "Requested water temperature sensor was not found in UiRaS"
     )
-
-

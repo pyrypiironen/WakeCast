@@ -26,7 +26,6 @@ def test_lead_time_bucket(lead_time, expected_bucket):
     assert actual == expected_bucket
 
 
-
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -81,9 +80,7 @@ def test_keeps_forecast_sources_separate():
     grouped = select_representative_pairs(pairs)
 
     assert len(grouped["48-72h"]) == 2
-    assert {
-        pair.forecast.source for pair in grouped["48-72h"]
-    } == {"harmonie", "ecmwf"}
+    assert {pair.forecast.source for pair in grouped["48-72h"]} == {"harmonie", "ecmwf"}
 
 
 def test_keeps_observation_timestamps_separate():
@@ -98,7 +95,6 @@ def test_keeps_observation_timestamps_separate():
     grouped = select_representative_pairs(pairs)
 
     assert len(grouped["0-3h"]) == 2
-
 
 
 from app.services.weather_comparison import calculate_accuracy_metrics
@@ -162,5 +158,3 @@ def test_accuracy_metrics_empty_pairs():
     metrics = calculate_accuracy_metrics({"0-3h": []})
 
     assert metrics == []
-
-

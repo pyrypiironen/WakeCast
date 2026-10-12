@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+
 def test_refresh_all_active_parks(db, monkeypatch):
     def make_park(name, slug, active):
         return ParkDB(
@@ -57,7 +58,6 @@ def test_refresh_all_active_parks(db, monkeypatch):
     assert cleanup_calls == [active_park.id]
 
 
-
 def test_refresh_all_active_weather_stations(db, monkeypatch):
     active_station = WeatherStationDB(
         name="Active Test Station",
@@ -97,7 +97,6 @@ def test_refresh_all_active_weather_stations(db, monkeypatch):
     weather_scheduler.refresh_all_active_weather_stations()
 
     assert refresh_calls == [active_station.id]
-
 
 
 def test_cleanup_all_active_weather_stations(db, monkeypatch):
@@ -141,7 +140,6 @@ def test_cleanup_all_active_weather_stations(db, monkeypatch):
     assert cleanup_calls == [active_station.id]
 
 
-
 def test_scheduler_closes_session_on_refresh_failure(monkeypatch):
     mock_db = MagicMock()
 
@@ -149,9 +147,7 @@ def test_scheduler_closes_session_on_refresh_failure(monkeypatch):
     park.id = 123
     park.slug = "failing-test-park"
 
-    mock_db.query.return_value.filter.return_value.all.return_value = [
-        park
-    ]
+    mock_db.query.return_value.filter.return_value.all.return_value = [park]
 
     def failing_refresh(db, park):
         raise RuntimeError("Simulated FMI failure")
@@ -171,7 +167,6 @@ def test_scheduler_closes_session_on_refresh_failure(monkeypatch):
 
     mock_db.rollback.assert_called_once()
     mock_db.close.assert_called_once()
-
 
 
 def test_scheduler_continues_after_park_failure(monkeypatch):
@@ -227,7 +222,6 @@ def test_scheduler_continues_after_park_failure(monkeypatch):
     mock_db.close.assert_called_once()
 
 
-
 def test_scheduler_continues_after_station_refresh_failure(monkeypatch):
     mock_db = MagicMock()
 
@@ -267,7 +261,6 @@ def test_scheduler_continues_after_station_refresh_failure(monkeypatch):
 
     mock_db.rollback.assert_called_once()
     mock_db.close.assert_called_once()
-
 
 
 def test_scheduler_continues_after_station_cleanup_failure(monkeypatch):
@@ -311,13 +304,10 @@ def test_scheduler_continues_after_station_cleanup_failure(monkeypatch):
     mock_db.close.assert_called_once()
 
 
-
 def test_scheduler_closes_session_on_database_query_failure(monkeypatch):
     mock_db = MagicMock()
 
-    mock_db.query.side_effect = RuntimeError(
-        "Simulated database query failure"
-    )
+    mock_db.query.side_effect = RuntimeError("Simulated database query failure")
 
     monkeypatch.setattr(
         weather_scheduler,

@@ -25,6 +25,7 @@ SessionLocal = sessionmaker(
 class Base(DeclarativeBase):
     pass
 
+
 def get_db():
     db = SessionLocal()
 
@@ -32,4 +33,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

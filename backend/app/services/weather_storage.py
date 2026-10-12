@@ -73,26 +73,22 @@ def save_observations(
 
     insert_statement = insert(WeatherObservationDB).values(rows)
 
-    statement = (
-        insert_statement
-        .on_conflict_do_update(
-            constraint="uq_weather_observations_station_timestamp",
-            set_={
-                "fetched_at": insert_statement.excluded.fetched_at,
-                "observation_location": insert_statement.excluded.observation_location,
-                "temperature": insert_statement.excluded.temperature,
-                "wind_speed": insert_statement.excluded.wind_speed,
-                "wind_gust": insert_statement.excluded.wind_gust,
-                "wind_direction": insert_statement.excluded.wind_direction,
-                "precipitation": insert_statement.excluded.precipitation,
-                "cloudiness": insert_statement.excluded.cloudiness,
-                "resolution_minutes": insert_statement.excluded.resolution_minutes,
-                "is_aggregated": insert_statement.excluded.is_aggregated,
-                "source": insert_statement.excluded.source,
-            },
-        )
-        .returning(WeatherObservationDB.id)
-    )
+    statement = insert_statement.on_conflict_do_update(
+        constraint="uq_weather_observations_station_timestamp",
+        set_={
+            "fetched_at": insert_statement.excluded.fetched_at,
+            "observation_location": insert_statement.excluded.observation_location,
+            "temperature": insert_statement.excluded.temperature,
+            "wind_speed": insert_statement.excluded.wind_speed,
+            "wind_gust": insert_statement.excluded.wind_gust,
+            "wind_direction": insert_statement.excluded.wind_direction,
+            "precipitation": insert_statement.excluded.precipitation,
+            "cloudiness": insert_statement.excluded.cloudiness,
+            "resolution_minutes": insert_statement.excluded.resolution_minutes,
+            "is_aggregated": insert_statement.excluded.is_aggregated,
+            "source": insert_statement.excluded.source,
+        },
+    ).returning(WeatherObservationDB.id)
 
     result = db.execute(statement)
     saved_ids = result.scalars().all()
@@ -145,9 +141,7 @@ def cleanup_old_forecast_snapshots(
     cutoff = datetime.now(timezone.utc) - timedelta(days=full_history_days)
 
     hourly_snapshots = (
-        db.query(
-            func.min(WeatherForecastDB.fetched_at).label("keep_fetched_at")
-        )
+        db.query(func.min(WeatherForecastDB.fetched_at).label("keep_fetched_at"))
         .filter(
             WeatherForecastDB.park_id == park_id,
             WeatherForecastDB.fetched_at < cutoff,
@@ -224,5 +218,3 @@ def cleanup_old_observations(
     db.commit()
 
     return deleted_rows
-
-

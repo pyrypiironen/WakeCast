@@ -69,6 +69,8 @@ def main() -> None:
                         end_time=next_chunk - timedelta(seconds=1),
                     )
                 except Exception as exc:
+                    db.rollback()
+
                     print(
                         f"FAILED "
                         f"{current.date()} - "
@@ -98,8 +100,7 @@ def main() -> None:
             )
 
         print(
-            f"\nBackfill complete. "
-            f"Total inserted: {total_inserted}",
+            f"\nBackfill complete. Total inserted: {total_inserted}",
             flush=True,
         )
     finally:

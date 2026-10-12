@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -54,9 +53,7 @@ class ParkDB(Base):
         index=True,
     )
 
-    water_temperature_station: Mapped[
-        WaterTemperatureStationDB | None
-    ] = relationship(
+    water_temperature_station: Mapped[WaterTemperatureStationDB | None] = relationship(
         "WaterTemperatureStationDB",
         foreign_keys=[water_temperature_station_id],
     )

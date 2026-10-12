@@ -80,15 +80,10 @@ def test_save_observations_upsert(db):
     assert rows[0].cloudiness == 40.0
 
 
-
 def test_cleanup_old_observations(db):
     now = datetime.now(timezone.utc)
-    old_hour = (now - timedelta(days=200)).replace(
-        minute=0, second=0, microsecond=0
-    )
-    recent_hour = (now - timedelta(days=1)).replace(
-        minute=0, second=0, microsecond=0
-    )
+    old_hour = (now - timedelta(days=200)).replace(minute=0, second=0, microsecond=0)
+    recent_hour = (now - timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
 
     stations = [
         WeatherStationDB(
@@ -116,19 +111,15 @@ def test_cleanup_old_observations(db):
             is_aggregated=False,
         )
 
-    db.add_all([
-        make_observation(stations[0].id, old_hour),
-        make_observation(
-            stations[0].id, old_hour + timedelta(minutes=10)
-        ),
-        make_observation(stations[0].id, recent_hour),
-        make_observation(
-            stations[0].id, recent_hour + timedelta(minutes=10)
-        ),
-        make_observation(
-            stations[1].id, old_hour + timedelta(minutes=10)
-        ),
-    ])
+    db.add_all(
+        [
+            make_observation(stations[0].id, old_hour),
+            make_observation(stations[0].id, old_hour + timedelta(minutes=10)),
+            make_observation(stations[0].id, recent_hour),
+            make_observation(stations[0].id, recent_hour + timedelta(minutes=10)),
+            make_observation(stations[1].id, old_hour + timedelta(minutes=10)),
+        ]
+    )
     db.flush()
 
     deleted = cleanup_old_observations(db, stations[0].id)
@@ -136,9 +127,9 @@ def test_cleanup_old_observations(db):
     assert deleted == 1
 
     remaining = db.scalars(
-        select(WeatherObservationDB).where(
-            WeatherObservationDB.weather_station_id == stations[0].id
-        ).order_by(WeatherObservationDB.timestamp)
+        select(WeatherObservationDB)
+        .where(WeatherObservationDB.weather_station_id == stations[0].id)
+        .order_by(WeatherObservationDB.timestamp)
     ).all()
 
     assert len(remaining) == 3
@@ -156,12 +147,9 @@ def test_cleanup_old_observations(db):
     assert other_station_rows[0].resolution_minutes == 10
 
 
-
 def test_cleanup_old_forecast_snapshots(db):
     now = datetime.now(timezone.utc)
-    old_hour = (now - timedelta(days=10)).replace(
-        minute=0, second=0, microsecond=0
-    )
+    old_hour = (now - timedelta(days=10)).replace(minute=0, second=0, microsecond=0)
     recent_time = now - timedelta(days=1)
 
     park = ParkDB(
@@ -197,11 +185,13 @@ def test_cleanup_old_forecast_snapshots(db):
     first_old = old_hour + timedelta(minutes=5)
     second_old = old_hour + timedelta(minutes=20)
 
-    db.add_all([
-        make_forecast(first_old),
-        make_forecast(second_old),
-        make_forecast(recent_time),
-    ])
+    db.add_all(
+        [
+            make_forecast(first_old),
+            make_forecast(second_old),
+            make_forecast(recent_time),
+        ]
+    )
     db.flush()
 
     deleted = cleanup_old_forecast_snapshots(db, park.id)
@@ -209,9 +199,7 @@ def test_cleanup_old_forecast_snapshots(db):
     assert deleted == 1
 
     remaining = db.scalars(
-        select(WeatherForecastDB).where(
-            WeatherForecastDB.park_id == park.id
-        )
+        select(WeatherForecastDB).where(WeatherForecastDB.park_id == park.id)
     ).all()
 
     assert len(remaining) == 2
@@ -219,7 +207,6 @@ def test_cleanup_old_forecast_snapshots(db):
         first_old,
         recent_time,
     }
-
 
 
 def test_save_empty_observations(db):
@@ -254,7 +241,6 @@ def test_save_empty_observations(db):
     ).all()
 
     assert rows == []
-
 
 
 def test_observation_upsert_preserves_water_temperature(db):
@@ -311,7 +297,6 @@ def test_observation_upsert_preserves_water_temperature(db):
     assert existing.water_temperature == 15.5
 
 
-
 def test_observation_upsert_keeps_stations_separate(db):
     stations = [
         WeatherStationDB(
@@ -358,10 +343,7 @@ def test_observation_upsert_keeps_stations_separate(db):
 
     assert len(rows) == 2
 
-    temperatures = {
-        row.weather_station_id: row.temperature
-        for row in rows
-    }
+    temperatures = {row.weather_station_id: row.temperature for row in rows}
 
     assert temperatures[stations[0].id] == 10.0
     assert temperatures[stations[1].id] == 20.0

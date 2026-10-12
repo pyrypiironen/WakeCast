@@ -14,9 +14,7 @@ from app.models.weather_db import (
 )
 
 
-TEST_DATABASE_URL = (
-    "postgresql+psycopg://pyry@localhost/wakecast_test"
-)
+TEST_DATABASE_URL = "postgresql+psycopg://pyry@localhost/wakecast_test"
 
 
 @pytest.fixture
@@ -30,9 +28,7 @@ def db():
             ).scalar_one()
 
             if database_name != "wakecast_test":
-                raise RuntimeError(
-                    "Refusing to run tests outside wakecast_test"
-                )
+                raise RuntimeError("Refusing to run tests outside wakecast_test")
 
         Base.metadata.create_all(engine)
 

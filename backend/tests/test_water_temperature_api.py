@@ -99,15 +99,11 @@ def test_water_temperature_response(client, db, park, station):
     assert data["water_temperature"] == 11.06
     assert data["is_stale"] is False
     assert datetime.fromisoformat(data["timestamp"]) == measured_at
-    assert datetime.fromisoformat(data["fetched_at"]) == (
-        observation.fetched_at
-    )
+    assert datetime.fromisoformat(data["fetched_at"]) == (observation.fetched_at)
 
 
 def test_unknown_park(client):
-    response = client.get(
-        "/api/parks/unknown-water-test-park/water-temperature"
-    )
+    response = client.get("/api/parks/unknown-water-test-park/water-temperature")
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Park not found"}

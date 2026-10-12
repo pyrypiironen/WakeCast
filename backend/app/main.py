@@ -16,14 +16,13 @@ from app.security import require_refresh_api_key
 from app.services.weather_errors import WeatherProviderError
 from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
-from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
+from app.services.weather_storage import (
+    get_latest_forecast_snapshot,
+    is_forecast_snapshot_fresh,
+)
 from app.services.water_temperature_storage import (
     get_latest_water_temperature_observation,
 )
-
-
-
-
 
 
 logger = logging.getLogger(__name__)
@@ -61,11 +60,7 @@ def get_park(
     slug: str,
     db: Session = Depends(get_db),
 ):
-    park = (
-        db.query(ParkDB)
-        .filter(ParkDB.slug == slug)
-        .first()
-    )
+    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
 
     if park is None:
         raise HTTPException(
@@ -84,11 +79,7 @@ def get_park_weather(
     slug: str,
     db: Session = Depends(get_db),
 ):
-    park = (
-        db.query(ParkDB)
-        .filter(ParkDB.slug == slug)
-        .first()
-    )
+    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
 
     if park is None:
         raise HTTPException(
@@ -106,7 +97,7 @@ def get_park_weather(
             status_code=404,
             detail="Weather forecast not found",
         )
-    
+
     if not is_forecast_snapshot_fresh(rows):
         raise HTTPException(
             status_code=503,
@@ -134,7 +125,6 @@ def get_park_weather(
     )
 
 
-
 @app.post(
     "/api/parks/{slug}/weather/refresh",
     dependencies=[Depends(require_refresh_api_key)],
@@ -143,11 +133,7 @@ def refresh_park_weather(
     slug: str,
     db: Session = Depends(get_db),
 ):
-    park = (
-        db.query(ParkDB)
-        .filter(ParkDB.slug == slug)
-        .first()
-    )
+    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
 
     if park is None:
         raise HTTPException(
@@ -205,11 +191,7 @@ def get_park_water_temperature(
     slug: str,
     db: Session = Depends(get_db),
 ):
-    park = (
-        db.query(ParkDB)
-        .filter(ParkDB.slug == slug)
-        .first()
-    )
+    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
 
     if park is None:
         raise HTTPException(

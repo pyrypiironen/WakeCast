@@ -84,10 +84,7 @@ def parse_observations(
         NAMESPACES,
     )
 
-    field_names = [
-        element.attrib["name"]
-        for element in field_elements
-    ]
+    field_names = [element.attrib["name"] for element in field_elements]
 
     positions_element = root.find(
         ".//gmlcov:positions",
@@ -172,12 +169,7 @@ def get_observation_resolution_minutes(
         return None
 
     intervals = [
-        int(
-            (
-                current.timestamp - previous.timestamp
-            ).total_seconds()
-            // 60
-        )
+        int((current.timestamp - previous.timestamp).total_seconds() // 60)
         for previous, current in zip(
             weather.observations,
             weather.observations[1:],
@@ -188,5 +180,3 @@ def get_observation_resolution_minutes(
         return None
 
     return min(intervals)
-
-

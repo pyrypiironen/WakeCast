@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -46,9 +45,7 @@ def get_forecast_observation_pairs(
         raise ValueError(f"Park {park_id} not found")
 
     if park.observation_station_id is None:
-        raise ValueError(
-            f"Park {park_id} has no reference observation station"
-        )
+        raise ValueError(f"Park {park_id} has no reference observation station")
 
     statement = (
         select(WeatherForecastDB, WeatherObservationDB)
@@ -58,8 +55,7 @@ def get_forecast_observation_pairs(
         )
         .where(
             WeatherForecastDB.park_id == park_id,
-            WeatherObservationDB.weather_station_id
-            == park.observation_station_id,
+            WeatherObservationDB.weather_station_id == park.observation_station_id,
             WeatherForecastDB.timestamp >= start_time,
             WeatherForecastDB.timestamp < end_time,
             WeatherForecastDB.fetched_at <= WeatherForecastDB.timestamp,
@@ -76,9 +72,8 @@ def get_forecast_observation_pairs(
         ForecastObservationPair(
             forecast=forecast,
             observation=observation,
-            lead_time_hours=(
-                forecast.timestamp - forecast.fetched_at
-            ).total_seconds() / 3600,
+            lead_time_hours=(forecast.timestamp - forecast.fetched_at).total_seconds()
+            / 3600,
         )
         for forecast, observation in rows
     ]
@@ -88,12 +83,8 @@ def get_lead_time_bucket(
     lead_time_hours: float,
 ) -> LeadTimeBucket | None:
     for bucket in LEAD_TIME_BUCKETS:
-        if (
-            lead_time_hours >= bucket.min_hours
-            and (
-                bucket.max_hours is None
-                or lead_time_hours < bucket.max_hours
-            )
+        if lead_time_hours >= bucket.min_hours and (
+            bucket.max_hours is None or lead_time_hours < bucket.max_hours
         ):
             return bucket
 
@@ -122,23 +113,17 @@ def select_representative_pairs(
 
         existing = selected.get(key)
 
-        if (
-            existing is None
-            or abs(pair.lead_time_hours - bucket.target_hours)
-            < abs(existing.lead_time_hours - bucket.target_hours)
+        if existing is None or abs(pair.lead_time_hours - bucket.target_hours) < abs(
+            existing.lead_time_hours - bucket.target_hours
         ):
             selected[key] = pair
 
-    grouped = {
-        bucket.name: []
-        for bucket in LEAD_TIME_BUCKETS
-    }
+    grouped = {bucket.name: [] for bucket in LEAD_TIME_BUCKETS}
 
     for (_, _, bucket_name), pair in selected.items():
         grouped[bucket_name].append(pair)
 
     return grouped
-
 
 
 @dataclass
@@ -162,10 +147,7 @@ def calculate_accuracy_metrics(
         sources = sorted(set(pair.forecast.source for pair in pairs))
 
         for source in sources:
-            source_pairs = [
-                pair for pair in pairs
-                if pair.forecast.source == source
-            ]
+            source_pairs = [pair for pair in pairs if pair.forecast.source == source]
 
             for variable in variables:
                 errors = []
@@ -194,4 +176,3 @@ def calculate_accuracy_metrics(
                 )
 
     return results
-

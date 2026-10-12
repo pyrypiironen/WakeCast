@@ -155,9 +155,7 @@ def test_forecast_observation_invalid_matches(db, scenario):
 
     observation = WeatherObservationDB(
         weather_station_id=(
-            other_station.id
-            if scenario == "wrong_station"
-            else station.id
+            other_station.id if scenario == "wrong_station" else station.id
         ),
         timestamp=(
             valid_time + timedelta(minutes=10)
@@ -188,7 +186,6 @@ def test_forecast_observation_invalid_matches(db, scenario):
     )
 
     assert pairs == []
-
 
 
 def test_comparison_park_not_found(db):
