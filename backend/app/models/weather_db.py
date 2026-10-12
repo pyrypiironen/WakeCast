@@ -100,10 +100,6 @@ class WeatherObservationDB(Base):
 
     precipitation: Mapped[float | None] = mapped_column(Float, nullable=True)
     cloudiness: Mapped[float | None] = mapped_column(Float, nullable=True)
-    water_temperature: Mapped[float | None] = mapped_column(
-        Float,
-        nullable=True,
-    )
 
     resolution_minutes: Mapped[int | None] = mapped_column(
         nullable=True,

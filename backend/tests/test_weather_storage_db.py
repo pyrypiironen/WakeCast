@@ -243,60 +243,6 @@ def test_save_empty_observations(db):
     assert rows == []
 
 
-def test_observation_upsert_preserves_water_temperature(db):
-    station = WeatherStationDB(
-        name="Water Temperature Test Station",
-        region="test",
-        source="fmi",
-        source_station_id=999997,
-        is_active=True,
-    )
-    db.add(station)
-    db.flush()
-
-    timestamp = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
-
-    existing = WeatherObservationDB(
-        weather_station_id=station.id,
-        timestamp=timestamp,
-        fetched_at=datetime.now(timezone.utc),
-        observation_location="Test Station",
-        temperature=10.0,
-        wind_speed=5.0,
-        water_temperature=15.5,
-        source="fmi",
-        resolution_minutes=10,
-        is_aggregated=False,
-    )
-
-    db.add(existing)
-    db.flush()
-
-    response = WeatherObservationResponse(
-        observation_station_id=station.id,
-        observation_location="Test Station",
-        observations=[
-            WeatherObservation(
-                timestamp=timestamp,
-                temperature=12.0,
-                wind_speed=6.0,
-                wind_gust=8.0,
-                wind_direction=180.0,
-                precipitation=0.0,
-                cloudiness=50.0,
-            )
-        ],
-    )
-
-    assert save_observations(db, response, station.id) == 1
-
-    db.refresh(existing)
-
-    assert existing.temperature == 12.0
-    assert existing.wind_speed == 6.0
-    assert existing.water_temperature == 15.5
-
-
 def test_observation_upsert_keeps_stations_separate(db):
     stations = [
         WeatherStationDB(

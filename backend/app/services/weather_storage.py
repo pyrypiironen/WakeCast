@@ -60,7 +60,6 @@ def save_observations(
             "wind_direction": observation.wind_direction,
             "precipitation": observation.precipitation,
             "cloudiness": observation.cloudiness,
-            "water_temperature": None,
             "resolution_minutes": resolution_minutes,
             "is_aggregated": is_aggregated,
             "source": "fmi",
