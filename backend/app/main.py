@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.park import Park
 from app.models.park_db import ParkDB
 from app.models.weather import WeatherForecast, WeatherResponse
+from app.security import require_refresh_api_key
 from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
@@ -124,7 +125,10 @@ def get_park_weather(
 
 
 
-@app.post("/api/parks/{slug}/weather/refresh")
+@app.post(
+    "/api/parks/{slug}/weather/refresh",
+    dependencies=[Depends(require_refresh_api_key)],
+)
 def refresh_park_weather(
     slug: str,
     db: Session = Depends(get_db),
@@ -171,6 +175,7 @@ def refresh_park_weather(
         "status": "ok",
         "saved_rows": saved_rows,
     }
+
 
 
 
