@@ -1,23 +1,38 @@
+import os
+
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from app.database import Base
 
 # Register all SQLAlchemy models with Base.metadata.
 from app.models.park_db import CableDB, ParkDB
+from app.models.water_temperature_db import (
+    WaterTemperatureObservationDB,
+    WaterTemperatureStationDB,
+)
 from app.models.weather_db import (
     WeatherForecastDB,
     WeatherObservationDB,
     WeatherStationDB,
 )
 
-TEST_DATABASE_URL = "postgresql+psycopg://pyry@localhost/wakecast_test"
-
 
 @pytest.fixture
 def db():
-    engine = create_engine(TEST_DATABASE_URL)
+    database_url = os.getenv("TEST_DATABASE_URL")
+
+    if not database_url or not database_url.strip():
+        raise RuntimeError(
+            "TEST_DATABASE_URL must be set in the environment or backend/.env"
+        )
+
+    if make_url(database_url).database != "wakecast_test":
+        raise RuntimeError("Refusing to run tests outside wakecast_test")
+
+    engine = create_engine(database_url)
 
     try:
         with engine.connect() as connection:
