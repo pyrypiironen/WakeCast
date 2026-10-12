@@ -11,7 +11,11 @@ from app.models.park_db import ParkDB
 
 
 @pytest.fixture
-def client(db):
+def client(db, monkeypatch):
+    monkeypatch.setenv(
+        "WEATHER_REFRESH_API_KEY",
+        "test-refresh-api-key",
+    )
     def override_get_db():
         yield db
 
@@ -19,7 +23,10 @@ def client(db):
 
     try:
         # No context manager: avoid starting the background scheduler.
-        yield TestClient(app)
+        yield TestClient(
+            app,
+            headers={"X-API-Key": "test-refresh-api-key"},
+        )
     finally:
         app.dependency_overrides.clear()
 
