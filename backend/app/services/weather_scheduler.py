@@ -6,6 +6,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.database import SessionLocal
 from app.models.park_db import ParkDB
 from app.models.weather_db import WeatherStationDB
+from app.models.water_temperature_db import WaterTemperatureStationDB
+from app.services.water_temperature_refresh import refresh_water_temperature
 from app.services.weather_refresh import (
     refresh_observations,
     refresh_park_forecast,
@@ -105,6 +107,31 @@ def cleanup_all_active_weather_stations() -> None:
         db.close()
 
 
+def refresh_all_active_water_temperature_stations() -> None:
+    db = SessionLocal()
+
+    try:
+        stations = (
+            db.query(WaterTemperatureStationDB)
+            .filter(WaterTemperatureStationDB.is_active.is_(True))
+            .all()
+        )
+
+        for station in stations:
+            try:
+                refresh_water_temperature(
+                    db=db,
+                    station=station,
+                )
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "Water temperature refresh failed for station %s",
+                    station.id,
+                )
+    finally:
+        db.close()
+
 
 scheduler = BackgroundScheduler(
     timezone="UTC",
@@ -132,5 +159,13 @@ scheduler.add_job(
     hour=3,
     minute=0,
     id="cleanup_weather_observations",
+    replace_existing=True,
+)
+
+scheduler.add_job(
+    refresh_all_active_water_temperature_stations,
+    trigger="interval",
+    minutes=30,
+    id="refresh_water_temperatures",
     replace_existing=True,
 )

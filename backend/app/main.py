@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 import logging
 
 from contextlib import asynccontextmanager
@@ -10,11 +11,19 @@ from app.database import get_db
 from app.models.park import Park
 from app.models.park_db import ParkDB
 from app.models.weather import WeatherForecast, WeatherResponse
+from app.models.water_temperature import ParkWaterTemperatureResponse
 from app.security import require_refresh_api_key
 from app.services.weather_errors import WeatherProviderError
 from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
+from app.services.water_temperature_storage import (
+    get_latest_water_temperature_observation,
+)
+
+
+
+
 
 
 logger = logging.getLogger(__name__)
@@ -188,3 +197,61 @@ def refresh_park_weather(
     }
 
 
+@app.get(
+    "/api/parks/{slug}/water-temperature",
+    response_model=ParkWaterTemperatureResponse,
+)
+def get_park_water_temperature(
+    slug: str,
+    db: Session = Depends(get_db),
+):
+    park = (
+        db.query(ParkDB)
+        .filter(ParkDB.slug == slug)
+        .first()
+    )
+
+    if park is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Park not found",
+        )
+
+    station = park.water_temperature_station
+
+    if station is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Water temperature station not configured",
+        )
+
+    if not station.is_active:
+        raise HTTPException(
+            status_code=503,
+            detail="Water temperature station is inactive",
+        )
+
+    latest = get_latest_water_temperature_observation(
+        db=db,
+        station_id=station.id,
+    )
+
+    if latest is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Water temperature observation not found",
+        )
+
+    age = datetime.now(timezone.utc) - latest.timestamp
+
+    return ParkWaterTemperatureResponse(
+        source=station.source,
+        source_station_id=station.source_station_id,
+        observation_location=station.name,
+        latitude=station.latitude,
+        longitude=station.longitude,
+        timestamp=latest.timestamp,
+        fetched_at=latest.fetched_at,
+        water_temperature=latest.water_temperature,
+        is_stale=age > timedelta(hours=2),
+    )

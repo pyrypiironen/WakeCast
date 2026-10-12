@@ -7,6 +7,7 @@ from app.services.weather_scheduler import (
     cleanup_all_active_weather_stations,
     refresh_all_active_parks,
     refresh_all_active_weather_stations,
+    refresh_all_active_water_temperature_stations,
     scheduler,
 )
 
@@ -18,6 +19,7 @@ def test_scheduler_registers_expected_jobs():
         "refresh_weather_forecasts",
         "refresh_weather_observations",
         "cleanup_weather_observations",
+        "refresh_water_temperatures",
     }
 
 
@@ -50,3 +52,12 @@ def test_observation_cleanup_schedule():
     assert next_run == datetime(
         2026, 10, 11, 3, tzinfo=timezone.utc
     )
+
+
+def test_water_temperature_refresh_interval():
+    job = scheduler.get_job("refresh_water_temperatures")
+
+    assert job.func is refresh_all_active_water_temperature_stations
+    assert isinstance(job.trigger, IntervalTrigger)
+    assert job.trigger.interval.total_seconds() == 30 * 60
+

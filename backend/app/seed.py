@@ -1,6 +1,6 @@
-
 from app.database import SessionLocal
 from app.models.park_db import CableDB, ParkDB
+from app.models.water_temperature_db import WaterTemperatureStationDB
 from app.models.weather_db import WeatherStationDB
 
 
@@ -30,6 +30,28 @@ def seed_database():
         else:
             station = existing_station
 
+        water_station = (
+            db.query(WaterTemperatureStationDB)
+            .filter(
+                WaterTemperatureStationDB.source == "uiras",
+                WaterTemperatureStationDB.source_station_id
+                == "70B3D57050004CDB",
+            )
+            .first()
+        )
+
+        if water_station is None:
+            water_station = WaterTemperatureStationDB(
+                name="Lauttasaaren mattolaituri",
+                latitude=60.1707,
+                longitude=24.8579,
+                source="uiras",
+                source_station_id="70B3D57050004CDB",
+                is_active=True,
+            )
+            db.add(water_station)
+            db.flush()
+
         existing_park = (
             db.query(ParkDB)
             .filter(ParkDB.slug == "laguuni-keilis")
@@ -50,6 +72,7 @@ def seed_database():
                 timezone="Europe/Helsinki",
                 is_active=True,
                 observation_station_id=station.id,
+                water_temperature_station_id=water_station.id,
                 cables=[
                     CableDB(
                         name="Pro Cable",
@@ -64,6 +87,7 @@ def seed_database():
             db.add(park)
         else:
             existing_park.observation_station_id = station.id
+            existing_park.water_temperature_station_id = water_station.id
 
         db.commit()
     except Exception:
@@ -75,3 +99,4 @@ def seed_database():
 
 if __name__ == "__main__":
     seed_database()
+

@@ -10,6 +10,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.weather_db import WeatherStationDB
+    from app.models.water_temperature_db import WaterTemperatureStationDB
 
 
 class ParkDB(Base):
@@ -42,6 +43,22 @@ class ParkDB(Base):
     observation_station: Mapped[WeatherStationDB | None] = relationship(
         "WeatherStationDB",
         foreign_keys=[observation_station_id],
+    )
+
+    water_temperature_station_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "water_temperature_stations.id",
+            name="fk_parks_water_temperature_station_id",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    water_temperature_station: Mapped[
+        WaterTemperatureStationDB | None
+    ] = relationship(
+        "WaterTemperatureStationDB",
+        foreign_keys=[water_temperature_station_id],
     )
 
     cables: Mapped[list[CableDB]] = relationship(
