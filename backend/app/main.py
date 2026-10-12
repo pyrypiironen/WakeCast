@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_park_or_404
 from app.models.park import Park
 from app.models.park_db import ParkDB
 from app.models.water_temperature import ParkWaterTemperatureResponse
@@ -55,17 +56,8 @@ def get_parks(db: Session = Depends(get_db)):
 
 @app.get("/api/parks/{slug}", response_model=Park)
 def get_park(
-    slug: str,
-    db: Session = Depends(get_db),
+    park: ParkDB = Depends(get_park_or_404),
 ):
-    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
-
-    if park is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Park not found",
-        )
-
     return park
 
 
@@ -74,17 +66,9 @@ def get_park(
     response_model=WeatherResponse,
 )
 def get_park_weather(
-    slug: str,
     db: Session = Depends(get_db),
+    park: ParkDB = Depends(get_park_or_404),
 ):
-    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
-
-    if park is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Park not found",
-        )
-
     rows = get_latest_forecast_snapshot(
         db=db,
         park_id=park.id,
@@ -130,15 +114,8 @@ def get_park_weather(
 def refresh_park_weather(
     slug: str,
     db: Session = Depends(get_db),
+    park: ParkDB = Depends(get_park_or_404),
 ):
-    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
-
-    if park is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Park not found",
-        )
-
     try:
         saved_rows = refresh_park_forecast(
             db=db,
@@ -186,17 +163,9 @@ def refresh_park_weather(
     response_model=ParkWaterTemperatureResponse,
 )
 def get_park_water_temperature(
-    slug: str,
     db: Session = Depends(get_db),
+    park: ParkDB = Depends(get_park_or_404),
 ):
-    park = db.query(ParkDB).filter(ParkDB.slug == slug).first()
-
-    if park is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Park not found",
-        )
-
     station = park.water_temperature_station
 
     if station is None:
