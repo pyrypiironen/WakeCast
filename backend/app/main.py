@@ -11,6 +11,7 @@ from app.models.park import Park
 from app.models.park_db import ParkDB
 from app.models.weather import WeatherForecast, WeatherResponse
 from app.security import require_refresh_api_key
+from app.services.weather_errors import WeatherProviderError
 from app.services.weather_scheduler import scheduler
 from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_storage import get_latest_forecast_snapshot, is_forecast_snapshot_fresh
@@ -150,6 +151,16 @@ def refresh_park_weather(
             db=db,
             park=park,
         )
+    except WeatherProviderError:
+        db.rollback()
+        logger.exception(
+            "Weather provider error refreshing weather for park %s",
+            slug,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Weather forecast provider unavailable",
+        )
     except SQLAlchemyError:
         db.rollback()
         logger.exception(
@@ -163,18 +174,17 @@ def refresh_park_weather(
     except Exception:
         db.rollback()
         logger.exception(
-            "Weather refresh failed for park %s",
+            "Unexpected error refreshing weather for park %s",
             slug,
         )
         raise HTTPException(
-            status_code=502,
-            detail="Weather forecast provider unavailable",
+            status_code=500,
+            detail="Weather refresh failed",
         )
 
     return {
         "status": "ok",
         "saved_rows": saved_rows,
     }
-
 
 

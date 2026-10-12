@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import httpx
 
 from app.models.weather import WeatherForecast, WeatherResponse
+from app.services.weather_errors import WeatherProviderError
 
 
 FMI_URL = "https://opendata.fmi.fi/wfs"
@@ -42,19 +43,35 @@ def get_harmonie_forecast(
         "latlon": f"{latitude},{longitude}",
     }
 
-    response = httpx.get(
-        FMI_URL,
-        params=params,
-        timeout=10.0,
-    )
+    try:
+        response = httpx.get(
+            FMI_URL,
+            params=params,
+            timeout=10.0,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise WeatherProviderError(
+            "FMI forecast request failed"
+        ) from exc
 
-    response.raise_for_status()
+    try:
+        weather = parse_forecast(
+            response.text,
+            HARMONIE_FIELD_MAP,
+            source="harmonie",
+        )
+    except (ET.ParseError, ValueError, KeyError, OverflowError) as exc:
+        raise WeatherProviderError(
+            "FMI returned invalid forecast data"
+        ) from exc
 
-    return parse_forecast(
-        response.text,
-        HARMONIE_FIELD_MAP,
-        source="harmonie",
-    )
+    if not weather.forecasts:
+        raise WeatherProviderError(
+            "FMI returned no usable forecast points"
+        )
+
+    return weather
 
 
 def parse_forecast(

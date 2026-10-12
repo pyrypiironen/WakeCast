@@ -3,11 +3,11 @@ from fastapi.testclient import TestClient
 
 from datetime import datetime, timedelta, timezone
 
-from app.models.weather_db import WeatherForecastDB
-
 from app.database import get_db
 from app.main import app
 from app.models.park_db import ParkDB
+from app.models.weather_db import WeatherForecastDB
+from app.services.weather_errors import WeatherProviderError
 
 
 @pytest.fixture
@@ -285,7 +285,7 @@ def test_refresh_weather_provider_failure(client, db, monkeypatch):
     db.flush()
 
     def failing_refresh(db, park):
-        raise RuntimeError("Simulated FMI failure")
+        raise WeatherProviderError("Simulated FMI failure")
 
     monkeypatch.setattr(
         main,
@@ -302,7 +302,6 @@ def test_refresh_weather_provider_failure(client, db, monkeypatch):
         "detail": "Weather forecast provider unavailable"
     }
     assert "Simulated FMI failure" not in response.text
-
 
 
 def test_refresh_weather_database_failure(client, db, monkeypatch):
@@ -347,3 +346,44 @@ def test_refresh_weather_database_failure(client, db, monkeypatch):
         "detail": "Weather refresh failed"
     }
     assert "Simulated database failure" not in response.text
+
+
+def test_refresh_weather_unexpected_failure(client, db, monkeypatch):
+    from app import main
+
+    park = ParkDB(
+        name="Unexpected Failure Park",
+        slug="unexpected-failure-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+
+    db.add(park)
+    db.flush()
+
+    def failing_refresh(db, park):
+        raise RuntimeError("Simulated internal failure")
+
+    monkeypatch.setattr(
+        main,
+        "refresh_park_forecast",
+        failing_refresh,
+    )
+
+    response = client.post(
+        "/api/parks/unexpected-failure-park/weather/refresh"
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": "Weather refresh failed"
+    }
+    assert "Simulated internal failure" not in response.text
+
+
