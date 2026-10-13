@@ -11,7 +11,7 @@ from app.models.weather_db import WeatherForecastDB, WeatherObservationDB
 def save_forecast_snapshot(
     db: Session,
     park_id: int,
-    weather: WeatherResponse,
+    provider_forecasts: tuple[WeatherResponse, ...],
 ) -> int:
     fetched_at = datetime.now(timezone.utc)
 
@@ -30,6 +30,7 @@ def save_forecast_snapshot(
             cloudiness=forecast.cloudiness,
             source=forecast.source,
         )
+        for weather in provider_forecasts
         for forecast in weather.forecasts
     ]
 

@@ -17,6 +17,7 @@ from app.services.water_temperature_storage import (
     get_latest_water_temperature_observation,
 )
 from app.services.weather_errors import WeatherProviderError
+from app.services.weather_forecast import merge_forecasts
 from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_scheduler import scheduler
 from app.services.weather_storage import (
@@ -86,8 +87,16 @@ def get_park_weather(
             detail="Weather forecast is stale",
         )
 
-    forecasts = [
-        WeatherForecast(
+    provider_responses = {
+        source: WeatherResponse(
+            forecast_location="Unknown",
+            forecasts=[],
+        )
+        for source in ("harmonie", "ecmwf")
+    }
+
+    for row in rows:
+        forecast = WeatherForecast(
             timestamp=row.timestamp,
             temperature=row.temperature,
             wind_speed=row.wind_speed,
@@ -98,12 +107,14 @@ def get_park_weather(
             cloudiness=row.cloudiness,
             source=row.source,
         )
-        for row in rows
-    ]
 
-    return WeatherResponse(
-        forecast_location=rows[0].forecast_location,
-        forecasts=forecasts,
+        provider_response = provider_responses[forecast.source]
+        provider_response.forecast_location = row.forecast_location
+        provider_response.forecasts.append(forecast)
+
+    return merge_forecasts(
+        provider_responses["harmonie"],
+        provider_responses["ecmwf"],
     )
 
 

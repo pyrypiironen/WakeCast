@@ -6,7 +6,9 @@ from fastapi.testclient import TestClient
 from app.database import get_db
 from app.main import app
 from app.models.park_db import ParkDB
+from app.models.weather import WeatherForecast, WeatherResponse
 from app.models.weather_db import WeatherForecastDB
+from app.services import weather_forecast
 from app.services.weather_errors import WeatherProviderError
 
 
@@ -348,3 +350,107 @@ def test_refresh_weather_unexpected_failure(client, db, monkeypatch):
     assert response.status_code == 500
     assert response.json() == {"detail": "Weather refresh failed"}
     assert "Simulated internal failure" not in response.text
+
+
+def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch):
+    park = ParkDB(
+        name="Archive Test Park",
+        slug="archive-test-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+    db.add(park)
+    db.flush()
+    park_id = park.id
+
+    timestamp = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    def point(source, valid_time, wind_speed):
+        return WeatherForecast(
+            timestamp=valid_time,
+            temperature=12.0,
+            wind_speed=wind_speed,
+            wind_gust=9.0,
+            wind_direction=180.0,
+            precipitation=0.0,
+            precipitation_probability=None,
+            cloudiness=50.0,
+            source=source,
+        )
+
+    fmi = WeatherResponse(
+        forecast_location="Archive Test Park",
+        forecasts=[
+            point("harmonie", timestamp, 5.0),
+        ],
+    )
+    ecmwf = WeatherResponse(
+        forecast_location="Unknown",
+        forecasts=[
+            point("ecmwf", timestamp, 7.0),
+            point("ecmwf", timestamp + timedelta(hours=1), 8.0),
+        ],
+    )
+
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_harmonie_forecast",
+        lambda latitude, longitude: fmi,
+    )
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_ecmwf_forecast",
+        lambda latitude, longitude: ecmwf,
+    )
+
+    refresh_response = client.post("/api/parks/archive-test-park/weather/refresh")
+
+    assert refresh_response.status_code == 200
+    assert refresh_response.json() == {
+        "status": "ok",
+        "saved_rows": 3,
+    }
+
+    db.expire_all()
+    rows = (
+        db.query(WeatherForecastDB).filter(WeatherForecastDB.park_id == park_id).all()
+    )
+
+    assert len(rows) == 3
+    assert len({row.fetched_at for row in rows}) == 1
+
+    overlapping_rows = [row for row in rows if row.timestamp == timestamp]
+    assert {row.source: row.wind_speed for row in overlapping_rows} == {
+        "harmonie": 5.0,
+        "ecmwf": 7.0,
+    }
+
+    assert {row.source: row.forecast_location for row in rows} == {
+        "harmonie": "Archive Test Park",
+        "ecmwf": "Unknown",
+    }
+
+    response = client.get("/api/parks/archive-test-park/weather")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["forecast_location"] == "Archive Test Park"
+    assert len(data["forecasts"]) == 2
+    assert [item["wind_speed"] for item in data["forecasts"]] == [5.0, 8.0]
+    assert [item["source"] for item in data["forecasts"]] == [
+        "harmonie",
+        "ecmwf",
+    ]
+    assert [
+        datetime.fromisoformat(item["timestamp"]) for item in data["forecasts"]
+    ] == [
+        timestamp,
+        timestamp + timedelta(hours=1),
+    ]

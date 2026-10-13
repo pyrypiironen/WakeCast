@@ -30,11 +30,11 @@ def merge_forecasts(
     )
 
 
-def get_forecast(
+def get_provider_forecasts(
     latitude: float,
     longitude: float,
-) -> WeatherResponse:
-    harmonie = get_harmonie_forecast(
+) -> tuple[WeatherResponse, WeatherResponse]:
+    fmi = get_harmonie_forecast(
         latitude,
         longitude,
     )
@@ -44,7 +44,16 @@ def get_forecast(
         longitude,
     )
 
-    return merge_forecasts(
-        harmonie,
-        ecmwf,
+    return fmi, ecmwf
+
+
+def get_forecast(
+    latitude: float,
+    longitude: float,
+) -> WeatherResponse:
+    fmi, ecmwf = get_provider_forecasts(
+        latitude,
+        longitude,
     )
+
+    return merge_forecasts(fmi, ecmwf)
