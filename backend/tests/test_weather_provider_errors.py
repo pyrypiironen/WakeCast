@@ -19,7 +19,7 @@ def provider(monkeypatch, request):
 
 
 PROVIDERS = [
-    (fmi_forecast, "get_harmonie_forecast"),
+    (fmi_forecast, "get_fmi_edited_forecast"),
     (ecmwf, "get_ecmwf_forecast"),
 ]
 
@@ -73,7 +73,7 @@ def test_fmi_rejects_invalid_or_empty_forecast(monkeypatch, xml_text):
     )
 
     with pytest.raises(WeatherProviderError):
-        fmi_forecast.get_harmonie_forecast(60.0, 24.0)
+        fmi_forecast.get_fmi_edited_forecast(60.0, 24.0)
 
 
 @pytest.fixture

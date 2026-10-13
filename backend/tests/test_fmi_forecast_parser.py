@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 from app.services.fmi_forecast import (
-    HARMONIE_FIELD_MAP,
+    FMI_EDITED_FIELD_MAP,
     parse_forecast,
 )
 
@@ -54,7 +54,7 @@ def test_optional_precipitation_probability(required_fields, probability):
 
     weather = parse_forecast(
         make_forecast_xml(fields),
-        HARMONIE_FIELD_MAP,
+        FMI_EDITED_FIELD_MAP,
     )
 
     assert len(weather.forecasts) == 1
@@ -66,13 +66,14 @@ def test_optional_precipitation_probability(required_fields, probability):
     assert forecast.temperature == 12.0
     assert forecast.wind_speed == 4.0
     assert forecast.cloudiness == 50.0
+    assert forecast.source == "fmi_edited"
 
 
 def test_missing_required_field_rejects_response(required_fields):
     fields = [(name, value) for name, value in required_fields if name != "Temperature"]
 
     with pytest.raises(ValueError, match="Invalid FMI forecast fields"):
-        parse_forecast(make_forecast_xml(fields), HARMONIE_FIELD_MAP)
+        parse_forecast(make_forecast_xml(fields), FMI_EDITED_FIELD_MAP)
 
 
 def test_missing_required_measurement_skips_point(required_fields):
@@ -81,7 +82,7 @@ def test_missing_required_measurement_skips_point(required_fields):
         for name, value in required_fields
     ]
 
-    weather = parse_forecast(make_forecast_xml(fields), HARMONIE_FIELD_MAP)
+    weather = parse_forecast(make_forecast_xml(fields), FMI_EDITED_FIELD_MAP)
 
     assert weather.forecasts == []
 
@@ -113,7 +114,7 @@ def test_rejects_malformed_forecast(
     with pytest.raises(ValueError):
         parse_forecast(
             ET.tostring(root, encoding="unicode"),
-            HARMONIE_FIELD_MAP,
+            FMI_EDITED_FIELD_MAP,
         )
 
 
@@ -121,7 +122,7 @@ def test_rejects_duplicate_fields(required_fields):
     fields = required_fields + [("Temperature", "13.0")]
 
     with pytest.raises(ValueError, match="Invalid FMI forecast fields"):
-        parse_forecast(make_forecast_xml(fields), HARMONIE_FIELD_MAP)
+        parse_forecast(make_forecast_xml(fields), FMI_EDITED_FIELD_MAP)
 
 
 def test_rejects_duplicate_timestamps(required_fields):
@@ -138,5 +139,5 @@ def test_rejects_duplicate_timestamps(required_fields):
     with pytest.raises(ValueError, match="Duplicate"):
         parse_forecast(
             ET.tostring(root, encoding="unicode"),
-            HARMONIE_FIELD_MAP,
+            FMI_EDITED_FIELD_MAP,
         )

@@ -20,7 +20,7 @@ NAMESPACES = {
     "target": "http://xml.fmi.fi/namespace/om/atmosphericfeatures/1.1",
 }
 
-HARMONIE_FIELD_MAP = {
+FMI_EDITED_FIELD_MAP = {
     "Temperature": "temperature",
     "WindSpeedMS": "wind_speed",
     "HourlyMaximumGust": "wind_gust",
@@ -31,7 +31,7 @@ HARMONIE_FIELD_MAP = {
 }
 
 
-def get_harmonie_forecast(
+def get_fmi_edited_forecast(
     latitude: float,
     longitude: float,
 ) -> WeatherResponse:
@@ -56,8 +56,8 @@ def get_harmonie_forecast(
     try:
         weather = parse_forecast(
             response.text,
-            HARMONIE_FIELD_MAP,
-            source="harmonie",
+            FMI_EDITED_FIELD_MAP,
+            source="fmi_edited",
         )
     except (ET.ParseError, ValueError, KeyError, OverflowError) as exc:
         raise WeatherProviderError("FMI returned invalid forecast data") from exc
@@ -71,7 +71,7 @@ def get_harmonie_forecast(
 def parse_forecast(
     xml_text: str,
     field_map: dict[str, str],
-    source: str = "harmonie",
+    source: str = "fmi_edited",
 ) -> WeatherResponse:
     root = ET.fromstring(xml_text)
 

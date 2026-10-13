@@ -92,7 +92,7 @@ def get_park_weather(
             forecast_location="Unknown",
             forecasts=[],
         )
-        for source in ("harmonie", "ecmwf")
+        for source in ("fmi_edited", "ecmwf")
     }
 
     for row in rows:
@@ -108,12 +108,15 @@ def get_park_weather(
             source=row.source,
         )
 
-        provider_response = provider_responses[forecast.source]
+        provider_key = (
+            "fmi_edited" if forecast.source == "harmonie" else forecast.source
+        )
+        provider_response = provider_responses[provider_key]
         provider_response.forecast_location = row.forecast_location
         provider_response.forecasts.append(forecast)
 
     return merge_forecasts(
-        provider_responses["harmonie"],
+        provider_responses["fmi_edited"],
         provider_responses["ecmwf"],
     )
 

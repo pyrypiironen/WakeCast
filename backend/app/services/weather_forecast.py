@@ -1,17 +1,17 @@
 from app.models.weather import WeatherResponse
 from app.services.ecmwf import get_ecmwf_forecast
-from app.services.fmi_forecast import get_harmonie_forecast
+from app.services.fmi_forecast import get_fmi_edited_forecast
 
 
 def merge_forecasts(
-    harmonie: WeatherResponse,
+    fmi: WeatherResponse,
     ecmwf: WeatherResponse,
 ) -> WeatherResponse:
     forecasts_by_timestamp = {
         forecast.timestamp: forecast for forecast in ecmwf.forecasts
     }
 
-    for forecast in harmonie.forecasts:
+    for forecast in fmi.forecasts:
         forecasts_by_timestamp[forecast.timestamp] = forecast
 
     merged_forecasts = sorted(
@@ -19,7 +19,7 @@ def merge_forecasts(
         key=lambda forecast: forecast.timestamp,
     )
 
-    forecast_location = harmonie.forecast_location
+    forecast_location = fmi.forecast_location
 
     if forecast_location == "Unknown":
         forecast_location = ecmwf.forecast_location
@@ -34,7 +34,7 @@ def get_provider_forecasts(
     latitude: float,
     longitude: float,
 ) -> tuple[WeatherResponse, WeatherResponse]:
-    fmi = get_harmonie_forecast(
+    fmi = get_fmi_edited_forecast(
         latitude,
         longitude,
     )

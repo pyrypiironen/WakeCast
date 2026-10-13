@@ -27,7 +27,7 @@ def provider_responses():
     fmi = WeatherResponse(
         forecast_location="Keilaniemi",
         forecasts=[
-            point("harmonie", timestamp, 5.0),
+            point("fmi_edited", timestamp, 5.0),
         ],
     )
 
@@ -47,7 +47,7 @@ def test_fetch_preserves_both_provider_responses(monkeypatch, provider_responses
     fetch_fmi = Mock(return_value=fmi)
     fetch_ecmwf = Mock(return_value=ecmwf)
 
-    monkeypatch.setattr(weather_forecast, "get_harmonie_forecast", fetch_fmi)
+    monkeypatch.setattr(weather_forecast, "get_fmi_edited_forecast", fetch_fmi)
     monkeypatch.setattr(weather_forecast, "get_ecmwf_forecast", fetch_ecmwf)
 
     actual_fmi, actual_ecmwf = weather_forecast.get_provider_forecasts(
@@ -75,7 +75,7 @@ def test_merge_prefers_fmi_without_modifying_originals(provider_responses):
     assert merged.forecast_location == "Keilaniemi"
     assert len(merged.forecasts) == 2
     assert [point.wind_speed for point in merged.forecasts] == [5.0, 8.0]
-    assert [point.source for point in merged.forecasts] == ["harmonie", "ecmwf"]
+    assert [point.source for point in merged.forecasts] == ["fmi_edited", "ecmwf"]
     assert merged.forecasts[0].timestamp < merged.forecasts[1].timestamp
 
     assert fmi.model_dump() == original_fmi

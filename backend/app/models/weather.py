@@ -18,7 +18,7 @@ class WeatherForecast(BaseModel):
     precipitation_probability: float | None = None
     cloudiness: float
 
-    source: Literal["harmonie", "ecmwf"]
+    source: Literal["fmi_edited", "ecmwf", "harmonie"]
 
 
 class WeatherResponse(BaseModel):

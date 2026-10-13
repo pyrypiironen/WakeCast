@@ -387,7 +387,7 @@ def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch)
     fmi = WeatherResponse(
         forecast_location="Archive Test Park",
         forecasts=[
-            point("harmonie", timestamp, 5.0),
+            point("fmi_edited", timestamp, 5.0),
         ],
     )
     ecmwf = WeatherResponse(
@@ -400,7 +400,7 @@ def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch)
 
     monkeypatch.setattr(
         weather_forecast,
-        "get_harmonie_forecast",
+        "get_fmi_edited_forecast",
         lambda latitude, longitude: fmi,
     )
     monkeypatch.setattr(
@@ -427,12 +427,12 @@ def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch)
 
     overlapping_rows = [row for row in rows if row.timestamp == timestamp]
     assert {row.source: row.wind_speed for row in overlapping_rows} == {
-        "harmonie": 5.0,
+        "fmi_edited": 5.0,
         "ecmwf": 7.0,
     }
 
     assert {row.source: row.forecast_location for row in rows} == {
-        "harmonie": "Archive Test Park",
+        "fmi_edited": "Archive Test Park",
         "ecmwf": "Unknown",
     }
 
@@ -445,7 +445,7 @@ def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch)
     assert len(data["forecasts"]) == 2
     assert [item["wind_speed"] for item in data["forecasts"]] == [5.0, 8.0]
     assert [item["source"] for item in data["forecasts"]] == [
-        "harmonie",
+        "fmi_edited",
         "ecmwf",
     ]
     assert [
