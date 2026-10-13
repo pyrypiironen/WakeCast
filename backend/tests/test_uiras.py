@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import httpx
 import pytest
 
+from app.models import water_temperature as water_temperature_models
 from app.services import uiras
 from app.services.weather_errors import WeatherProviderError
 
@@ -224,3 +226,48 @@ def test_successful_request(monkeypatch, sensor_data):
     weather = uiras.get_water_temperature(STATION_ID)
 
     assert weather.observations[0].water_temperature == 11.06
+
+
+@pytest.mark.parametrize(
+    ("offset_seconds", "accepted"),
+    [
+        (-60, True),
+        (0, True),
+        (300, True),
+        (301, False),
+        (86400, False),
+    ],
+)
+def test_measurement_timestamp_clock_skew(
+    monkeypatch,
+    sensor_data,
+    offset_seconds,
+    accepted,
+):
+    fixed_now = datetime(2026, 10, 13, 12, tzinfo=timezone.utc)
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return fixed_now.replace(tzinfo=None)
+            return fixed_now.astimezone(tz)
+
+    monkeypatch.setattr(water_temperature_models, "datetime", FixedDatetime)
+
+    timestamp = fixed_now + timedelta(seconds=offset_seconds)
+    measurement = sensor_data["features"][0]["properties"]["measurement"]
+    measurement["time"] = timestamp.isoformat()
+
+    if accepted:
+        weather = uiras.parse_water_temperature(
+            sensor_data,
+            station_id=STATION_ID,
+        )
+        assert weather.observations[0].timestamp == timestamp
+    else:
+        with pytest.raises(WeatherProviderError, match="invalid sensor data"):
+            uiras.parse_water_temperature(
+                sensor_data,
+                station_id=STATION_ID,
+            )

@@ -238,3 +238,67 @@ def test_no_measurement_for_station(db, water_station):
         )
         is None
     )
+
+
+@pytest.mark.parametrize("include_valid_reading", [True, False])
+def test_latest_ignores_future_readings(
+    db,
+    water_station,
+    include_valid_reading,
+):
+    now = datetime.now(timezone.utc)
+
+    future_reading = WaterTemperatureObservationDB(
+        water_temperature_station_id=water_station.id,
+        timestamp=now + timedelta(days=1),
+        fetched_at=now,
+        water_temperature=99.0,
+    )
+    db.add(future_reading)
+
+    if include_valid_reading:
+        db.add(
+            WaterTemperatureObservationDB(
+                water_temperature_station_id=water_station.id,
+                timestamp=now - timedelta(minutes=10),
+                fetched_at=now,
+                water_temperature=11.0,
+            )
+        )
+
+    db.flush()
+
+    latest = get_latest_water_temperature_observation(
+        db,
+        water_station.id,
+    )
+
+    if include_valid_reading:
+        assert latest is not None
+        assert latest.timestamp == now - timedelta(minutes=10)
+        assert latest.water_temperature == 11.0
+    else:
+        assert latest is None
+
+
+def test_latest_allows_small_clock_skew(db, water_station):
+    now = datetime.now(timezone.utc)
+    timestamp = now + timedelta(minutes=4)
+
+    db.add(
+        WaterTemperatureObservationDB(
+            water_temperature_station_id=water_station.id,
+            timestamp=timestamp,
+            fetched_at=now,
+            water_temperature=11.0,
+        )
+    )
+    db.flush()
+
+    latest = get_latest_water_temperature_observation(
+        db,
+        water_station.id,
+    )
+
+    assert latest is not None
+    assert latest.timestamp == timestamp

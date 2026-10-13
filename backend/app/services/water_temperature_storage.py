@@ -3,7 +3,10 @@ from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.models.water_temperature import WaterTemperatureResponse
+from app.models.water_temperature import (
+    MAX_WATER_TEMPERATURE_CLOCK_SKEW,
+    WaterTemperatureResponse,
+)
 from app.models.water_temperature_db import (
     WaterTemperatureObservationDB,
     WaterTemperatureStationDB,
@@ -57,10 +60,13 @@ def get_latest_water_temperature_observation(
     db: Session,
     station_id: int,
 ) -> WaterTemperatureObservationDB | None:
+    latest_allowed = datetime.now(timezone.utc) + MAX_WATER_TEMPERATURE_CLOCK_SKEW
+
     return (
         db.query(WaterTemperatureObservationDB)
         .filter(
-            WaterTemperatureObservationDB.water_temperature_station_id == station_id
+            WaterTemperatureObservationDB.water_temperature_station_id == station_id,
+            WaterTemperatureObservationDB.timestamp <= latest_allowed,
         )
         .order_by(WaterTemperatureObservationDB.timestamp.desc())
         .first()
