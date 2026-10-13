@@ -77,12 +77,30 @@ def save_observations(
         set_={
             "fetched_at": insert_statement.excluded.fetched_at,
             "observation_location": insert_statement.excluded.observation_location,
-            "temperature": insert_statement.excluded.temperature,
-            "wind_speed": insert_statement.excluded.wind_speed,
-            "wind_gust": insert_statement.excluded.wind_gust,
-            "wind_direction": insert_statement.excluded.wind_direction,
-            "precipitation": insert_statement.excluded.precipitation,
-            "cloudiness": insert_statement.excluded.cloudiness,
+            "temperature": func.coalesce(
+                insert_statement.excluded.temperature,
+                WeatherObservationDB.temperature,
+            ),
+            "wind_speed": func.coalesce(
+                insert_statement.excluded.wind_speed,
+                WeatherObservationDB.wind_speed,
+            ),
+            "wind_gust": func.coalesce(
+                insert_statement.excluded.wind_gust,
+                WeatherObservationDB.wind_gust,
+            ),
+            "wind_direction": func.coalesce(
+                insert_statement.excluded.wind_direction,
+                WeatherObservationDB.wind_direction,
+            ),
+            "precipitation": func.coalesce(
+                insert_statement.excluded.precipitation,
+                WeatherObservationDB.precipitation,
+            ),
+            "cloudiness": func.coalesce(
+                insert_statement.excluded.cloudiness,
+                WeatherObservationDB.cloudiness,
+            ),
             "resolution_minutes": insert_statement.excluded.resolution_minutes,
             "is_aggregated": insert_statement.excluded.is_aggregated,
             "source": insert_statement.excluded.source,

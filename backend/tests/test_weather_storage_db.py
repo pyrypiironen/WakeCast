@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from sqlalchemy import select
 
 from app.models.park_db import ParkDB
@@ -293,3 +294,98 @@ def test_observation_upsert_keeps_stations_separate(db):
 
     assert temperatures[stations[0].id] == 10.0
     assert temperatures[stations[1].id] == 20.0
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "temperature",
+        "wind_speed",
+        "wind_gust",
+        "wind_direction",
+        "precipitation",
+        "cloudiness",
+    ],
+)
+@pytest.mark.parametrize(
+    ("initial_value", "incoming_value", "expected_value"),
+    [
+        (10.0, None, 10.0),
+        (10.0, 2.0, 2.0),
+        (10.0, 0.0, 0.0),
+        (None, None, None),
+    ],
+)
+def test_observation_upsert_handles_missing_values(
+    db,
+    field,
+    initial_value,
+    incoming_value,
+    expected_value,
+):
+    station = WeatherStationDB(
+        name="Missing Values Station",
+        region="test",
+        source="fmi",
+        source_station_id=999979,
+        is_active=True,
+    )
+    db.add(station)
+    db.flush()
+
+    station_id = station.id
+    timestamp = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    measurement_fields = (
+        "temperature",
+        "wind_speed",
+        "wind_gust",
+        "wind_direction",
+        "precipitation",
+        "cloudiness",
+    )
+
+    def make_response(target_value, other_value):
+        values = {name: other_value for name in measurement_fields}
+        values[field] = target_value
+
+        return WeatherObservationResponse(
+            observation_station_id=station.source_station_id,
+            observation_location=station.name,
+            observations=[
+                WeatherObservation(timestamp=timestamp, **values),
+            ],
+        )
+
+    assert (
+        save_observations(
+            db,
+            make_response(initial_value, 10.0),
+            station_id,
+        )
+        == 1
+    )
+
+    query = select(WeatherObservationDB).where(
+        WeatherObservationDB.weather_station_id == station_id,
+        WeatherObservationDB.timestamp == timestamp,
+    )
+    original_id = db.scalars(query).one().id
+
+    assert (
+        save_observations(
+            db,
+            make_response(incoming_value, 20.0),
+            station_id,
+        )
+        == 1
+    )
+
+    db.expire_all()
+    row = db.scalars(query).one()
+
+    assert row.id == original_id
+    assert getattr(row, field) == expected_value
+
+    for other_field in measurement_fields:
+        if other_field != field:
+            assert getattr(row, other_field) == 20.0
