@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+from math import isfinite
 
 import httpx
 
@@ -74,70 +75,79 @@ def parse_forecast(
 ) -> WeatherResponse:
     root = ET.fromstring(xml_text)
 
-    location_element = root.find(
-        ".//target:Location/gml:name",
-        NAMESPACES,
+    location_element = root.find(".//target:Location/gml:name", NAMESPACES)
+    forecast_location = (
+        location_element.text
+        if location_element is not None and location_element.text
+        else "Unknown"
     )
-
-    if location_element is None or location_element.text is None:
-        forecast_location = "Unknown"
-    else:
-        forecast_location = location_element.text
 
     field_elements = root.findall(
         ".//gmlcov:rangeType/swe:DataRecord/swe:field",
         NAMESPACES,
     )
+    field_names = [element.attrib.get("name", "") for element in field_elements]
 
-    field_names = [element.attrib["name"] for element in field_elements]
-
-    positions_element = root.find(
-        ".//gmlcov:positions",
-        NAMESPACES,
-    )
-
-    values_element = root.find(
-        ".//gml:doubleOrNilReasonTupleList",
-        NAMESPACES,
-    )
+    required_fields = {
+        name
+        for name, mapped_name in field_map.items()
+        if mapped_name != "precipitation_probability"
+    }
 
     if (
-        positions_element is None
-        or positions_element.text is None
-        or values_element is None
-        or values_element.text is None
+        not field_names
+        or any(not name for name in field_names)
+        or len(field_names) != len(set(field_names))
+        or not required_fields.issubset(field_names)
     ):
-        return WeatherResponse(
-            forecast_location=forecast_location,
-            forecasts=[],
-        )
+        raise ValueError("Invalid FMI forecast fields")
 
-    position_values = positions_element.text.split()
+    positions_elements = root.findall(".//gmlcov:positions", NAMESPACES)
+    values_elements = root.findall(".//gml:doubleOrNilReasonTupleList", NAMESPACES)
 
-    timestamps = []
+    if len(positions_elements) != 1 or len(values_elements) != 1:
+        raise ValueError("Expected one FMI forecast coverage")
 
-    for index in range(2, len(position_values), 3):
-        unix_timestamp = int(float(position_values[index]))
-
-        timestamps.append(
-            datetime.fromtimestamp(
-                unix_timestamp,
-                tz=timezone.utc,
-            )
-        )
-
+    position_values = (positions_elements[0].text or "").split()
     rows = [
         line.split()
-        for line in values_element.text.strip().splitlines()
+        for line in (values_elements[0].text or "").splitlines()
         if line.strip()
     ]
 
+    if not position_values or len(position_values) % 3:
+        raise ValueError("Invalid FMI forecast positions")
+
+    if len(rows) != len(position_values) // 3:
+        raise ValueError("FMI forecast timestamp and row counts differ")
+
+    if any(len(row) != len(field_names) for row in rows):
+        raise ValueError("FMI forecast field and value counts differ")
+
     forecasts = []
+    seen_timestamps = set()
 
-    for timestamp, row in zip(timestamps, rows):
-        raw_data = dict(zip(field_names, row))
+    for index, row in enumerate(rows):
+        position = [
+            float(value) for value in position_values[index * 3 : index * 3 + 3]
+        ]
 
+        if not all(isfinite(value) for value in position):
+            raise ValueError("Non-finite FMI forecast position")
+
+        unix_timestamp = position[2]
+        if not unix_timestamp.is_integer():
+            raise ValueError("Invalid FMI forecast timestamp")
+
+        timestamp = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+
+        if timestamp in seen_timestamps:
+            raise ValueError("Duplicate FMI forecast timestamp")
+        seen_timestamps.add(timestamp)
+
+        raw_data = dict(zip(field_names, row, strict=True))
         values = {}
+        missing_required_value = False
 
         for fmi_name, wakecast_name in field_map.items():
             raw_value = raw_data.get(fmi_name)
@@ -145,20 +155,28 @@ def parse_forecast(
             if raw_value is None or raw_value == "NaN":
                 if wakecast_name == "precipitation_probability":
                     values[wakecast_name] = None
-                    continue
+                else:
+                    missing_required_value = True
+                continue
 
-                break
+            value = float(raw_value)
+            if not isfinite(value):
+                raise ValueError(f"Non-finite FMI forecast value: {fmi_name}")
 
-            values[wakecast_name] = float(raw_value)
+            values[wakecast_name] = value
 
-        else:
-            forecasts.append(
-                WeatherForecast(
-                    timestamp=timestamp,
-                    source=source,
-                    **values,
-                )
+        if missing_required_value:
+            continue
+
+        forecasts.append(
+            WeatherForecast(
+                timestamp=timestamp,
+                source=source,
+                **values,
             )
+        )
+
+    forecasts.sort(key=lambda forecast: forecast.timestamp)
 
     return WeatherResponse(
         forecast_location=forecast_location,
