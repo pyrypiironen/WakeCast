@@ -26,7 +26,9 @@ def refresh_all_active_parks() -> None:
     try:
         parks = db.query(ParkDB).filter(ParkDB.is_active.is_(True)).all()
 
-        for park in parks:
+        park_items = [(park, park.id, park.slug) for park in parks]
+
+        for park, park_id, park_slug in park_items:
             try:
                 refresh_park_forecast(
                     db=db,
@@ -35,7 +37,7 @@ def refresh_all_active_parks() -> None:
 
                 cleanup_old_forecast_snapshots(
                     db=db,
-                    park_id=park.id,
+                    park_id=park_id,
                 )
             except ForecastRefreshInProgress:
                 db.rollback()
@@ -44,7 +46,7 @@ def refresh_all_active_parks() -> None:
                 db.rollback()
                 logger.exception(
                     "Weather refresh failed for park %s",
-                    park.slug,
+                    park_slug,
                 )
     finally:
         db.close()
@@ -59,8 +61,9 @@ def refresh_all_active_weather_stations() -> None:
             .filter(WeatherStationDB.is_active.is_(True))
             .all()
         )
+        station_items = [(station, station.id) for station in stations]
 
-        for station in stations:
+        for station, station_id in station_items:
             try:
                 refresh_observations(
                     db=db,
@@ -70,7 +73,7 @@ def refresh_all_active_weather_stations() -> None:
                 db.rollback()
                 logger.exception(
                     "Weather observation refresh failed for station %s",
-                    station.id,
+                    station_id,
                 )
     finally:
         db.close()
@@ -85,18 +88,19 @@ def cleanup_all_active_weather_stations() -> None:
             .filter(WeatherStationDB.is_active.is_(True))
             .all()
         )
+        station_items = [(station, station.id) for station in stations]
 
-        for station in stations:
+        for station, station_id in station_items:
             try:
                 cleanup_old_observations(
                     db=db,
-                    weather_station_id=station.id,
+                    weather_station_id=station_id,
                 )
             except Exception:
                 db.rollback()
                 logger.exception(
                     "Weather observation cleanup failed for station %s",
-                    station.id,
+                    station_id,
                 )
     finally:
         db.close()
@@ -111,8 +115,9 @@ def refresh_all_active_water_temperature_stations() -> None:
             .filter(WaterTemperatureStationDB.is_active.is_(True))
             .all()
         )
+        station_items = [(station, station.id) for station in stations]
 
-        for station in stations:
+        for station, station_id in station_items:
             try:
                 refresh_water_temperature(
                     db=db,
@@ -122,7 +127,7 @@ def refresh_all_active_water_temperature_stations() -> None:
                 db.rollback()
                 logger.exception(
                     "Water temperature refresh failed for station %s",
-                    station.id,
+                    station_id,
                 )
     finally:
         db.close()

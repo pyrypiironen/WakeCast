@@ -382,3 +382,107 @@ def test_scheduler_skips_busy_park_and_continues(monkeypatch):
     mock_db.close.assert_called_once_with()
     logger.info.assert_called_once()
     logger.exception.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("job_name", "operation_name", "expected_message"),
+    [
+        (
+            "refresh_all_active_parks",
+            "refresh_park_forecast",
+            "Weather refresh failed for park test-item-101",
+        ),
+        (
+            "refresh_all_active_weather_stations",
+            "refresh_observations",
+            "Weather observation refresh failed for station 101",
+        ),
+        (
+            "cleanup_all_active_weather_stations",
+            "cleanup_old_observations",
+            "Weather observation cleanup failed for station 101",
+        ),
+        (
+            "refresh_all_active_water_temperature_stations",
+            "refresh_water_temperature",
+            "Water temperature refresh failed for station 101",
+        ),
+    ],
+)
+def test_scheduler_logs_without_reading_expired_identifiers(
+    monkeypatch,
+    caplog,
+    job_name,
+    operation_name,
+    expected_message,
+):
+    rolled_back = False
+
+    class ExpiringItem:
+        def __init__(self, item_id):
+            self._id = item_id
+
+        @property
+        def id(self):
+            if rolled_back:
+                raise AssertionError("ID accessed after rollback")
+            return self._id
+
+        @property
+        def slug(self):
+            if rolled_back:
+                raise AssertionError("Slug accessed after rollback")
+            return f"test-item-{self._id}"
+
+    items = [ExpiringItem(101), ExpiringItem(102)]
+    mock_db = MagicMock()
+    mock_db.query.return_value.filter.return_value.all.return_value = items
+
+    def rollback():
+        nonlocal rolled_back
+        rolled_back = True
+
+    mock_db.rollback.side_effect = rollback
+
+    original_error = RuntimeError("Original operation failure")
+    operation = MagicMock(side_effect=[original_error, None])
+
+    monkeypatch.setattr(
+        weather_scheduler,
+        "SessionLocal",
+        lambda: mock_db,
+    )
+    monkeypatch.setattr(
+        weather_scheduler,
+        operation_name,
+        operation,
+    )
+
+    if job_name == "refresh_all_active_parks":
+        cleanup = MagicMock()
+        monkeypatch.setattr(
+            weather_scheduler,
+            "cleanup_old_forecast_snapshots",
+            cleanup,
+        )
+
+    with caplog.at_level("ERROR", logger=weather_scheduler.__name__):
+        getattr(weather_scheduler, job_name)()
+
+    assert operation.call_count == 2
+    mock_db.rollback.assert_called_once_with()
+    mock_db.close.assert_called_once_with()
+
+    records = [
+        record for record in caplog.records if record.name == weather_scheduler.__name__
+    ]
+
+    assert len(records) == 1
+    assert records[0].getMessage() == expected_message
+    assert records[0].exc_info[1] is original_error
+
+    if job_name == "refresh_all_active_parks":
+        cleanup.assert_called_once_with(
+            db=mock_db,
+            park_id=102,
+        )
