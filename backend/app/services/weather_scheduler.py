@@ -11,6 +11,7 @@ from app.services.weather_refresh import (
     refresh_observations,
     refresh_park_forecast,
 )
+from app.services.weather_refresh_lock import ForecastRefreshInProgress
 from app.services.weather_storage import (
     cleanup_old_forecast_snapshots,
     cleanup_old_observations,
@@ -36,6 +37,9 @@ def refresh_all_active_parks() -> None:
                     db=db,
                     park_id=park.id,
                 )
+            except ForecastRefreshInProgress:
+                db.rollback()
+                logger.info("Skipping forecast refresh: another refresh is in progress")
             except Exception:
                 db.rollback()
                 logger.exception(

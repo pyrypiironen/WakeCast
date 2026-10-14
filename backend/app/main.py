@@ -23,6 +23,7 @@ from app.services.water_temperature_storage import (
 from app.services.weather_errors import WeatherProviderError
 from app.services.weather_forecast import merge_forecasts
 from app.services.weather_refresh import refresh_park_forecast
+from app.services.weather_refresh_lock import ForecastRefreshInProgress
 from app.services.weather_scheduler import scheduler
 from app.services.weather_storage import (
     get_latest_forecast_snapshot,
@@ -156,6 +157,12 @@ def refresh_park_weather(
         saved_rows = refresh_park_forecast(
             db=db,
             park=park,
+        )
+    except ForecastRefreshInProgress:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Weather forecast refresh already in progress",
         )
     except WeatherProviderError:
         db.rollback()

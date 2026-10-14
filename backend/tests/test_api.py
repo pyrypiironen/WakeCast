@@ -10,6 +10,7 @@ from app.models.weather import WeatherForecast, WeatherResponse
 from app.models.weather_db import WeatherForecastDB
 from app.services import weather_forecast
 from app.services.weather_errors import WeatherProviderError
+from app.services.weather_refresh_lock import ForecastRefreshInProgress
 
 
 @pytest.fixture
@@ -688,3 +689,35 @@ def test_provider_failure_refresh_storage_and_api(
         {"fmi_edited", "ecmwf"} - failed_sources if saved_rows else {"fmi_edited"}
     )
     assert {item["source"] for item in data["forecasts"]} == expected_sources
+
+
+def test_manual_forecast_refresh_already_in_progress(client, db, monkeypatch):
+    park = ParkDB(
+        name="Busy Refresh Park",
+        slug="busy-refresh-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+    db.add(park)
+    db.flush()
+
+    def busy_refresh(db, park):
+        raise ForecastRefreshInProgress("Weather forecast refresh already in progress")
+
+    monkeypatch.setattr(
+        "app.main.refresh_park_forecast",
+        busy_refresh,
+    )
+
+    response = client.post("/api/parks/busy-refresh-park/weather/refresh")
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Weather forecast refresh already in progress",
+    }

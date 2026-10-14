@@ -5,6 +5,7 @@ import pytest
 from app.models.park_db import ParkDB
 from app.models.weather_db import WeatherStationDB
 from app.services import weather_scheduler
+from app.services.weather_refresh_lock import ForecastRefreshInProgress
 
 
 def test_refresh_all_active_parks(db, monkeypatch):
@@ -323,3 +324,61 @@ def test_scheduler_closes_session_on_database_query_failure(monkeypatch):
         weather_scheduler.refresh_all_active_parks()
 
     mock_db.close.assert_called_once()
+
+
+def test_scheduler_skips_busy_park_and_continues(monkeypatch):
+    mock_db = MagicMock()
+
+    busy_park = MagicMock()
+    busy_park.id = 101
+
+    available_park = MagicMock()
+    available_park.id = 102
+
+    mock_db.query.return_value.filter.return_value.all.return_value = [
+        busy_park,
+        available_park,
+    ]
+
+    refresh_calls = []
+    cleanup = MagicMock()
+    logger = MagicMock()
+
+    def fake_refresh(db, park):
+        refresh_calls.append(park.id)
+
+        if park.id == 101:
+            raise ForecastRefreshInProgress(
+                "Weather forecast refresh already in progress"
+            )
+
+        return 2
+
+    monkeypatch.setattr(
+        weather_scheduler,
+        "SessionLocal",
+        lambda: mock_db,
+    )
+    monkeypatch.setattr(
+        weather_scheduler,
+        "refresh_park_forecast",
+        fake_refresh,
+    )
+    monkeypatch.setattr(
+        weather_scheduler,
+        "cleanup_old_forecast_snapshots",
+        cleanup,
+    )
+    monkeypatch.setattr(weather_scheduler, "logger", logger)
+
+    weather_scheduler.refresh_all_active_parks()
+
+    assert refresh_calls == [101, 102]
+    cleanup.assert_called_once_with(
+        db=mock_db,
+        park_id=102,
+    )
+    mock_db.rollback.assert_called_once_with()
+    mock_db.close.assert_called_once_with()
+    logger.info.assert_called_once()
+    logger.exception.assert_not_called()
