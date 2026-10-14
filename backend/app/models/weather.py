@@ -26,6 +26,12 @@ class WeatherResponse(BaseModel):
     forecasts: list[WeatherForecast]
 
 
+class ParkWeatherResponse(WeatherResponse):
+    fetched_at: datetime
+    coverage_start: datetime
+    coverage_end: datetime
+
+
 class WeatherObservation(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
 

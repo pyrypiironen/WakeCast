@@ -454,3 +454,86 @@ def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch)
         timestamp,
         timestamp + timedelta(hours=1),
     ]
+
+
+@pytest.mark.parametrize(
+    ("age_minutes", "forecast_hours", "expected_status", "expected_detail"),
+    [
+        (5, [-2, -1], 503, "Weather forecast has no upcoming data"),
+        (5, [-1, 1, 3], 200, None),
+        (5, [1, 3], 200, None),
+        (31, [1, 3], 503, "Weather forecast is stale"),
+        (-5, [1, 3], 503, "Weather forecast is stale"),
+    ],
+)
+def test_forecast_coverage_and_metadata(
+    client,
+    db,
+    age_minutes,
+    forecast_hours,
+    expected_status,
+    expected_detail,
+):
+    park = ParkDB(
+        name="Forecast Coverage Park",
+        slug="forecast-coverage-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+    db.add(park)
+    db.flush()
+
+    now = datetime.now(timezone.utc)
+    fetched_at = now - timedelta(minutes=age_minutes)
+
+    db.add_all(
+        [
+            WeatherForecastDB(
+                park_id=park.id,
+                timestamp=now + timedelta(hours=hours),
+                fetched_at=fetched_at,
+                forecast_location=park.name,
+                temperature=12.0,
+                wind_speed=5.0,
+                wind_gust=8.0,
+                wind_direction=180.0,
+                precipitation=0.0,
+                precipitation_probability=None,
+                cloudiness=50.0,
+                source="fmi_edited",
+            )
+            for hours in forecast_hours
+        ]
+    )
+    db.flush()
+
+    response = client.get("/api/parks/forecast-coverage-park/weather")
+
+    assert response.status_code == expected_status
+    data = response.json()
+
+    if expected_detail is not None:
+        assert data == {"detail": expected_detail}
+        return
+
+    expected_times = [
+        now + timedelta(hours=hours) for hours in forecast_hours if hours > 0
+    ]
+
+    assert datetime.fromisoformat(data["fetched_at"]) == fetched_at
+    assert datetime.fromisoformat(data["coverage_start"]) == expected_times[0]
+    assert datetime.fromisoformat(data["coverage_end"]) == expected_times[-1]
+    assert [
+        datetime.fromisoformat(point["timestamp"]) for point in data["forecasts"]
+    ] == expected_times
+
+    archived_count = (
+        db.query(WeatherForecastDB).filter(WeatherForecastDB.park_id == park.id).count()
+    )
+    assert archived_count == len(forecast_hours)

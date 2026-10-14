@@ -11,7 +11,11 @@ from app.dependencies import get_park_or_404
 from app.models.park import Park
 from app.models.park_db import ParkDB
 from app.models.water_temperature import ParkWaterTemperatureResponse
-from app.models.weather import WeatherForecast, WeatherResponse
+from app.models.weather import (
+    ParkWeatherResponse,
+    WeatherForecast,
+    WeatherResponse,
+)
 from app.security import require_refresh_api_key
 from app.services.water_temperature_storage import (
     get_latest_water_temperature_observation,
@@ -64,7 +68,7 @@ def get_park(
 
 @app.get(
     "/api/parks/{slug}/weather",
-    response_model=WeatherResponse,
+    response_model=ParkWeatherResponse,
 )
 def get_park_weather(
     db: Session = Depends(get_db),
@@ -81,10 +85,20 @@ def get_park_weather(
             detail="Weather forecast not found",
         )
 
-    if not is_forecast_snapshot_fresh(rows):
+    now = datetime.now(timezone.utc)
+
+    if not is_forecast_snapshot_fresh(rows, now=now):
         raise HTTPException(
             status_code=503,
             detail="Weather forecast is stale",
+        )
+
+    upcoming_rows = [row for row in rows if row.timestamp >= now]
+
+    if not upcoming_rows:
+        raise HTTPException(
+            status_code=503,
+            detail="Weather forecast has no upcoming data",
         )
 
     provider_responses = {
@@ -95,7 +109,7 @@ def get_park_weather(
         for source in ("fmi_edited", "ecmwf")
     }
 
-    for row in rows:
+    for row in upcoming_rows:
         forecast = WeatherForecast(
             timestamp=row.timestamp,
             temperature=row.temperature,
@@ -115,9 +129,17 @@ def get_park_weather(
         provider_response.forecast_location = row.forecast_location
         provider_response.forecasts.append(forecast)
 
-    return merge_forecasts(
+    merged = merge_forecasts(
         provider_responses["fmi_edited"],
         provider_responses["ecmwf"],
+    )
+
+    return ParkWeatherResponse(
+        forecast_location=merged.forecast_location,
+        forecasts=merged.forecasts,
+        fetched_at=rows[0].fetched_at,
+        coverage_start=merged.forecasts[0].timestamp,
+        coverage_end=merged.forecasts[-1].timestamp,
     )
 
 

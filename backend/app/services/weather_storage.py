@@ -141,14 +141,18 @@ def get_latest_forecast_snapshot(
 def is_forecast_snapshot_fresh(
     rows: list[WeatherForecastDB],
     max_age_minutes: int = 30,
+    *,
+    now: datetime | None = None,
 ) -> bool:
     if not rows:
         return False
 
-    fetched_at = rows[0].fetched_at
-    now = datetime.now(timezone.utc)
+    if now is None:
+        now = datetime.now(timezone.utc)
 
-    return now - fetched_at <= timedelta(minutes=max_age_minutes)
+    age = now - rows[0].fetched_at
+
+    return timedelta(0) <= age <= timedelta(minutes=max_age_minutes)
 
 
 def cleanup_old_forecast_snapshots(
