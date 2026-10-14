@@ -36,7 +36,8 @@ def test_backfill_rolls_back_before_next_chunk(monkeypatch, capsys):
     monkeypatch.setattr(backfill_script, "END_MONTH", 5)
     monkeypatch.setattr(backfill_script, "CHUNK_DAYS", 16)
 
-    backfill_script.main()
+    exit_code = backfill_script.main()
+    assert exit_code == 1
 
     assert events == [
         ("backfill", 1),
@@ -48,4 +49,5 @@ def test_backfill_rolls_back_before_next_chunk(monkeypatch, capsys):
 
     output = capsys.readouterr().out
     assert "FAILED 2026-05-01 - 2026-05-16" in output
-    assert "Total inserted: 5" in output
+    assert ("Successful chunks: 1; failed chunks: 1; total rows saved: 5") in output
+    assert "Backfill finished with failures" in output

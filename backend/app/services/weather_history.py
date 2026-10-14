@@ -62,14 +62,19 @@ def backfill_observations(
     if resolution_minutes is None:
         return 0
 
+    station_id = station.id
+
     if resolution_minutes >= 60:
-        return save_observations(
+        saved = save_observations(
             db=db,
             weather=weather,
-            weather_station_id=station.id,
+            weather_station_id=station_id,
             resolution_minutes=resolution_minutes,
             is_aggregated=False,
+            commit=False,
         )
+        db.commit()
+        return saved
 
     recent_cutoff = datetime.now(timezone.utc) - timedelta(days=RECENT_HISTORY_DAYS)
 
@@ -85,22 +90,22 @@ def backfill_observations(
         if observation.timestamp >= recent_cutoff
     ]
 
-    inserted = 0
+    saved = 0
 
     if old_observations:
         old_weather = build_response(
             weather=weather,
             observations=old_observations,
         )
-
         old_weather = reduce_to_hourly(old_weather)
 
-        inserted += save_observations(
+        saved += save_observations(
             db=db,
             weather=old_weather,
-            weather_station_id=station.id,
+            weather_station_id=station_id,
             resolution_minutes=60,
             is_aggregated=False,
+            commit=False,
         )
 
     if recent_observations:
@@ -109,12 +114,14 @@ def backfill_observations(
             observations=recent_observations,
         )
 
-        inserted += save_observations(
+        saved += save_observations(
             db=db,
             weather=recent_weather,
-            weather_station_id=station.id,
+            weather_station_id=station_id,
             resolution_minutes=resolution_minutes,
             is_aggregated=False,
+            commit=False,
         )
 
-    return inserted
+    db.commit()
+    return saved

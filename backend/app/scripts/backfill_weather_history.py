@@ -16,7 +16,7 @@ STATION_SOURCE = "fmi"
 STATION_SOURCE_ID = 100971
 
 
-def main() -> None:
+def main() -> int:
     db = SessionLocal()
 
     try:
@@ -29,7 +29,9 @@ def main() -> None:
             .one()
         )
 
-        total_inserted = 0
+        total_saved = 0
+        successful_chunks = 0
+        failed_ranges = []
 
         for year in range(START_YEAR, END_YEAR + 1):
             season_start = datetime(
@@ -39,15 +41,23 @@ def main() -> None:
                 tzinfo=timezone.utc,
             )
 
-            season_end = datetime(
-                year,
-                END_MONTH + 1,
-                1,
-                tzinfo=timezone.utc,
-            )
+            if END_MONTH == 12:
+                season_end = datetime(
+                    year + 1,
+                    1,
+                    1,
+                    tzinfo=timezone.utc,
+                )
+            else:
+                season_end = datetime(
+                    year,
+                    END_MONTH + 1,
+                    1,
+                    tzinfo=timezone.utc,
+                )
 
             current = season_start
-            year_inserted = 0
+            year_saved = 0
 
             print(
                 f"\nBackfilling {year}...",
@@ -59,52 +69,69 @@ def main() -> None:
                     current + timedelta(days=CHUNK_DAYS),
                     season_end,
                 )
+                chunk_end = next_chunk - timedelta(seconds=1)
+                range_label = f"{current.date()} - {chunk_end.date()}"
 
                 try:
-                    inserted = backfill_observations(
+                    saved = backfill_observations(
                         db=db,
                         station=station,
                         start_time=current,
-                        end_time=next_chunk - timedelta(seconds=1),
+                        end_time=chunk_end,
                     )
                 except Exception as exc:
                     db.rollback()
+                    failed_ranges.append(range_label)
 
                     print(
-                        f"FAILED "
-                        f"{current.date()} - "
-                        f"{(next_chunk - timedelta(days=1)).date()}: "
-                        f"{exc}",
+                        f"FAILED {range_label}: {type(exc).__name__}",
                         flush=True,
                     )
+                else:
+                    successful_chunks += 1
+                    year_saved += saved
+                    total_saved += saved
 
-                    current = next_chunk
-                    continue
-
-                year_inserted += inserted
-                total_inserted += inserted
-
-                print(
-                    f"{current.date()} - "
-                    f"{(next_chunk - timedelta(days=1)).date()}: "
-                    f"{inserted} inserted",
-                    flush=True,
-                )
+                    print(
+                        f"{range_label}: {saved} rows saved",
+                        flush=True,
+                    )
 
                 current = next_chunk
 
             print(
-                f"{year}: {year_inserted} observations inserted",
+                f"{year}: {year_saved} rows saved",
                 flush=True,
             )
 
         print(
-            f"\nBackfill complete. Total inserted: {total_inserted}",
+            "\nRows saved include inserts and updates; "
+            "they are not a count of newly inserted observations.",
             flush=True,
         )
+        print(
+            f"Successful chunks: {successful_chunks}; "
+            f"failed chunks: {len(failed_ranges)}; "
+            f"total rows saved: {total_saved}",
+            flush=True,
+        )
+
+        if failed_ranges:
+            print(
+                "Backfill finished with failures. Failed ranges:",
+                flush=True,
+            )
+
+            for range_label in failed_ranges:
+                print(f"  {range_label}", flush=True)
+
+            return 1
+
+        print("Backfill completed without chunk failures.", flush=True)
+        return 0
     finally:
         db.close()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

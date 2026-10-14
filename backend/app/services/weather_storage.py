@@ -46,6 +46,8 @@ def save_observations(
     weather_station_id: int,
     resolution_minutes: int | None = None,
     is_aggregated: bool = False,
+    *,
+    commit: bool = True,
 ) -> int:
     fetched_at = datetime.now(timezone.utc)
 
@@ -110,7 +112,10 @@ def save_observations(
 
     result = db.execute(statement)
     saved_ids = result.scalars().all()
-    db.commit()
+
+    if commit:
+        db.commit()
+
     return len(saved_ids)
 
 
