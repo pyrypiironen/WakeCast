@@ -22,6 +22,7 @@ from app.services.water_temperature_storage import (
 )
 from app.services.weather_errors import WeatherProviderError
 from app.services.weather_forecast import merge_forecasts
+from app.services.weather_job_monitor import job_monitor
 from app.services.weather_refresh import refresh_park_forecast
 from app.services.weather_refresh_lock import ForecastRefreshInProgress
 from app.services.weather_scheduler import scheduler
@@ -35,9 +36,26 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler.start()
+    scheduler.start(paused=True)
 
     try:
+        now = datetime.now(timezone.utc)
+
+        for job_id in (
+            "refresh_weather_forecasts",
+            "refresh_weather_observations",
+            "refresh_water_temperatures",
+        ):
+            scheduler.modify_job(
+                job_id,
+                next_run_time=now,
+                misfire_grace_time=60,
+                coalesce=True,
+                max_instances=1,
+            )
+
+        scheduler.resume()
+
         yield
     finally:
         scheduler.shutdown()
@@ -53,6 +71,18 @@ app = FastAPI(
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+@app.get(
+    "/api/admin/weather-jobs",
+    dependencies=[Depends(require_refresh_api_key)],
+)
+def get_weather_job_status():
+    return {
+        "scope": "process",
+        "scheduler_running": scheduler.running,
+        "jobs": job_monitor.snapshot(),
+    }
 
 
 @app.get("/api/parks", response_model=list[Park])

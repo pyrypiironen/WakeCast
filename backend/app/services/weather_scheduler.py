@@ -7,6 +7,7 @@ from app.models.park_db import ParkDB
 from app.models.water_temperature_db import WaterTemperatureStationDB
 from app.models.weather_db import WeatherStationDB
 from app.services.water_temperature_refresh import refresh_water_temperature
+from app.services.weather_job_monitor import job_monitor
 from app.services.weather_refresh import (
     refresh_observations,
     refresh_park_forecast,
@@ -20,12 +21,17 @@ from app.services.weather_storage import (
 logger = logging.getLogger(__name__)
 
 
-def refresh_all_active_parks() -> None:
+@job_monitor.track("refresh_weather_forecasts")
+def refresh_all_active_parks() -> dict[str, int]:
     db = SessionLocal()
+    result = {
+        "succeeded": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
 
     try:
         parks = db.query(ParkDB).filter(ParkDB.is_active.is_(True)).all()
-
         park_items = [(park, park.id, park.slug) for park in parks]
 
         for park, park_id, park_slug in park_items:
@@ -39,11 +45,15 @@ def refresh_all_active_parks() -> None:
                     db=db,
                     park_id=park_id,
                 )
+
+                result["succeeded"] += 1
             except ForecastRefreshInProgress:
                 db.rollback()
+                result["skipped"] += 1
                 logger.info("Skipping forecast refresh: another refresh is in progress")
             except Exception:
                 db.rollback()
+                result["failed"] += 1
                 logger.exception(
                     "Weather refresh failed for park %s",
                     park_slug,
@@ -51,9 +61,17 @@ def refresh_all_active_parks() -> None:
     finally:
         db.close()
 
+    return result
 
-def refresh_all_active_weather_stations() -> None:
+
+@job_monitor.track("refresh_weather_observations")
+def refresh_all_active_weather_stations() -> dict[str, int]:
     db = SessionLocal()
+    result = {
+        "succeeded": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
 
     try:
         stations = (
@@ -69,8 +87,11 @@ def refresh_all_active_weather_stations() -> None:
                     db=db,
                     station=station,
                 )
+
+                result["succeeded"] += 1
             except Exception:
                 db.rollback()
+                result["failed"] += 1
                 logger.exception(
                     "Weather observation refresh failed for station %s",
                     station_id,
@@ -78,9 +99,17 @@ def refresh_all_active_weather_stations() -> None:
     finally:
         db.close()
 
+    return result
 
-def cleanup_all_active_weather_stations() -> None:
+
+@job_monitor.track("cleanup_weather_observations")
+def cleanup_all_active_weather_stations() -> dict[str, int]:
     db = SessionLocal()
+    result = {
+        "succeeded": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
 
     try:
         stations = (
@@ -96,8 +125,11 @@ def cleanup_all_active_weather_stations() -> None:
                     db=db,
                     weather_station_id=station_id,
                 )
+
+                result["succeeded"] += 1
             except Exception:
                 db.rollback()
+                result["failed"] += 1
                 logger.exception(
                     "Weather observation cleanup failed for station %s",
                     station_id,
@@ -105,9 +137,17 @@ def cleanup_all_active_weather_stations() -> None:
     finally:
         db.close()
 
+    return result
 
-def refresh_all_active_water_temperature_stations() -> None:
+
+@job_monitor.track("refresh_water_temperatures")
+def refresh_all_active_water_temperature_stations() -> dict[str, int]:
     db = SessionLocal()
+    result = {
+        "succeeded": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
 
     try:
         stations = (
@@ -123,14 +163,19 @@ def refresh_all_active_water_temperature_stations() -> None:
                     db=db,
                     station=station,
                 )
+
+                result["succeeded"] += 1
             except Exception:
                 db.rollback()
+                result["failed"] += 1
                 logger.exception(
                     "Water temperature refresh failed for station %s",
                     station_id,
                 )
     finally:
         db.close()
+
+    return result
 
 
 scheduler = BackgroundScheduler(

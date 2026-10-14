@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -485,4 +486,77 @@ def test_scheduler_logs_without_reading_expired_identifiers(
         cleanup.assert_called_once_with(
             db=mock_db,
             park_id=102,
+        )
+
+
+@pytest.mark.parametrize(
+    ("job_name", "operation_name"),
+    [
+        ("refresh_all_active_parks", "refresh_park_forecast"),
+        ("refresh_all_active_weather_stations", "refresh_observations"),
+        ("cleanup_all_active_weather_stations", "cleanup_old_observations"),
+        (
+            "refresh_all_active_water_temperature_stations",
+            "refresh_water_temperature",
+        ),
+    ],
+)
+def test_scheduler_reports_item_outcomes(
+    monkeypatch,
+    job_name,
+    operation_name,
+):
+    mock_db = MagicMock()
+    is_park_job = job_name == "refresh_all_active_parks"
+
+    items = [
+        SimpleNamespace(id=101, slug="successful-item"),
+        SimpleNamespace(id=102, slug="failing-item"),
+    ]
+    outcomes = [
+        1,
+        RuntimeError("Simulated item failure"),
+    ]
+
+    if is_park_job:
+        items.append(SimpleNamespace(id=103, slug="busy-item"))
+        outcomes.append(ForecastRefreshInProgress("Refresh already in progress"))
+
+    mock_db.query.return_value.filter.return_value.all.return_value = items
+    operation = MagicMock(side_effect=outcomes)
+
+    monkeypatch.setattr(
+        weather_scheduler,
+        "SessionLocal",
+        lambda: mock_db,
+    )
+    monkeypatch.setattr(
+        weather_scheduler,
+        operation_name,
+        operation,
+    )
+
+    if is_park_job:
+        cleanup = MagicMock()
+        monkeypatch.setattr(
+            weather_scheduler,
+            "cleanup_old_forecast_snapshots",
+            cleanup,
+        )
+
+    result = getattr(weather_scheduler, job_name)()
+
+    assert result == {
+        "succeeded": 1,
+        "failed": 1,
+        "skipped": 1 if is_park_job else 0,
+    }
+    assert operation.call_count == len(items)
+    assert mock_db.rollback.call_count == (2 if is_park_job else 1)
+    mock_db.close.assert_called_once_with()
+
+    if is_park_job:
+        cleanup.assert_called_once_with(
+            db=mock_db,
+            park_id=101,
         )

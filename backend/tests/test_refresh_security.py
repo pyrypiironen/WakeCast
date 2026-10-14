@@ -143,7 +143,7 @@ def test_public_endpoints_do_not_require_key(
     refresh.assert_not_called()
 
 
-def test_openapi_requires_key_only_for_manual_refresh(
+def test_openapi_refresh_security_and_public_endpoints(
     security_client,
 ):
     client, _, _ = security_client
