@@ -5,6 +5,7 @@ import pytest
 
 from app.models.weather import WeatherForecast, WeatherResponse
 from app.services import weather_forecast
+from app.services.weather_errors import WeatherProviderError
 
 
 @pytest.fixture
@@ -90,3 +91,139 @@ def test_get_forecast_returns_merged_response(monkeypatch, provider_responses):
 
     assert [point.wind_speed for point in merged.forecasts] == [5.0, 8.0]
     fetch.assert_called_once_with(60.16905, 24.833173)
+
+
+@pytest.mark.parametrize("failed_source", ["fmi_edited", "ecmwf"])
+def test_fetch_continues_when_one_provider_fails(
+    monkeypatch,
+    provider_responses,
+    failed_source,
+):
+    fmi, ecmwf = provider_responses
+    fetch_fmi = Mock(return_value=fmi)
+    fetch_ecmwf = Mock(return_value=ecmwf)
+
+    if failed_source == "fmi_edited":
+        fetch_fmi.side_effect = WeatherProviderError("FMI unavailable")
+    else:
+        fetch_ecmwf.side_effect = WeatherProviderError("ECMWF unavailable")
+
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_fmi_edited_forecast",
+        fetch_fmi,
+    )
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_ecmwf_forecast",
+        fetch_ecmwf,
+    )
+
+    actual_fmi, actual_ecmwf = weather_forecast.get_provider_forecasts(
+        60.16905,
+        24.833173,
+    )
+
+    fetch_fmi.assert_called_once_with(60.16905, 24.833173)
+    fetch_ecmwf.assert_called_once_with(60.16905, 24.833173)
+
+    if failed_source == "fmi_edited":
+        assert actual_fmi.forecasts == []
+        assert actual_ecmwf is ecmwf
+        expected = ecmwf
+    else:
+        assert actual_fmi is fmi
+        assert actual_ecmwf.forecasts == []
+        expected = fmi
+
+    merged = weather_forecast.merge_forecasts(actual_fmi, actual_ecmwf)
+
+    assert merged.forecast_location == expected.forecast_location
+    assert merged.forecasts == sorted(
+        expected.forecasts,
+        key=lambda point: point.timestamp,
+    )
+
+
+def test_fetch_raises_when_both_providers_fail(monkeypatch):
+    fetch_fmi = Mock(side_effect=WeatherProviderError("FMI unavailable"))
+    fetch_ecmwf = Mock(side_effect=WeatherProviderError("ECMWF unavailable"))
+
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_fmi_edited_forecast",
+        fetch_fmi,
+    )
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_ecmwf_forecast",
+        fetch_ecmwf,
+    )
+
+    with pytest.raises(
+        WeatherProviderError,
+        match="Both forecast providers are unavailable",
+    ):
+        weather_forecast.get_provider_forecasts(60.16905, 24.833173)
+
+    fetch_fmi.assert_called_once_with(60.16905, 24.833173)
+    fetch_ecmwf.assert_called_once_with(60.16905, 24.833173)
+
+
+def test_fetch_rejects_two_empty_provider_responses(monkeypatch):
+    empty = WeatherResponse(
+        forecast_location="Unknown",
+        forecasts=[],
+    )
+
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_fmi_edited_forecast",
+        Mock(return_value=empty),
+    )
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_ecmwf_forecast",
+        Mock(return_value=empty),
+    )
+
+    with pytest.raises(
+        WeatherProviderError,
+        match="Both forecast providers are unavailable",
+    ):
+        weather_forecast.get_provider_forecasts(60.16905, 24.833173)
+
+
+@pytest.mark.parametrize(
+    "broken_function",
+    ["get_fmi_edited_forecast", "get_ecmwf_forecast"],
+)
+def test_fetch_does_not_hide_programming_errors(
+    monkeypatch,
+    provider_responses,
+    broken_function,
+):
+    fmi, ecmwf = provider_responses
+
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_fmi_edited_forecast",
+        Mock(return_value=fmi),
+    )
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_ecmwf_forecast",
+        Mock(return_value=ecmwf),
+    )
+
+    original_error = RuntimeError("Simulated programming error")
+    monkeypatch.setattr(
+        weather_forecast,
+        broken_function,
+        Mock(side_effect=original_error),
+    )
+
+    with pytest.raises(RuntimeError) as caught:
+        weather_forecast.get_provider_forecasts(60.16905, 24.833173)
+
+    assert caught.value is original_error

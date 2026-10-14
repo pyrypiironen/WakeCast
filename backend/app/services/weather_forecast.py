@@ -1,6 +1,11 @@
+import logging
+
 from app.models.weather import WeatherResponse
 from app.services.ecmwf import get_ecmwf_forecast
 from app.services.fmi_forecast import get_fmi_edited_forecast
+from app.services.weather_errors import WeatherProviderError
+
+logger = logging.getLogger(__name__)
 
 
 def merge_forecasts(
@@ -34,15 +39,35 @@ def get_provider_forecasts(
     latitude: float,
     longitude: float,
 ) -> tuple[WeatherResponse, WeatherResponse]:
-    fmi = get_fmi_edited_forecast(
-        latitude,
-        longitude,
-    )
+    responses = []
 
-    ecmwf = get_ecmwf_forecast(
-        latitude,
-        longitude,
-    )
+    for source, fetch in (
+        ("fmi_edited", get_fmi_edited_forecast),
+        ("ecmwf", get_ecmwf_forecast),
+    ):
+        try:
+            weather = fetch(latitude, longitude)
+
+            if not weather.forecasts:
+                raise WeatherProviderError(
+                    f"{source} returned no usable forecast points"
+                )
+        except WeatherProviderError:
+            logger.warning(
+                "Forecast provider unavailable: %s",
+                source,
+            )
+            weather = WeatherResponse(
+                forecast_location="Unknown",
+                forecasts=[],
+            )
+
+        responses.append(weather)
+
+    fmi, ecmwf = responses
+
+    if not fmi.forecasts and not ecmwf.forecasts:
+        raise WeatherProviderError("Both forecast providers are unavailable")
 
     return fmi, ecmwf
 

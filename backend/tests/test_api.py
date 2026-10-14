@@ -537,3 +537,154 @@ def test_forecast_coverage_and_metadata(
         db.query(WeatherForecastDB).filter(WeatherForecastDB.park_id == park.id).count()
     )
     assert archived_count == len(forecast_hours)
+
+
+@pytest.mark.parametrize(
+    ("failed_sources", "expected_status", "saved_rows", "expected_winds"),
+    [
+        ({"fmi_edited"}, 200, 2, [7.0, 8.0]),
+        ({"ecmwf"}, 200, 1, [5.0]),
+        ({"fmi_edited", "ecmwf"}, 502, 0, [4.0]),
+    ],
+)
+def test_provider_failure_refresh_storage_and_api(
+    client,
+    db,
+    monkeypatch,
+    failed_sources,
+    expected_status,
+    saved_rows,
+    expected_winds,
+):
+    park = ParkDB(
+        name="Provider Fallback Park",
+        slug="provider-fallback-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+    db.add(park)
+    db.flush()
+    park_id = park.id
+
+    now = datetime.now(timezone.utc)
+    timestamp = now + timedelta(hours=1)
+    previous_fetched_at = now - timedelta(minutes=5)
+
+    def point(source, valid_time, wind_speed):
+        return WeatherForecast(
+            timestamp=valid_time,
+            temperature=12.0,
+            wind_speed=wind_speed,
+            wind_gust=9.0,
+            wind_direction=180.0,
+            precipitation=0.0,
+            precipitation_probability=None,
+            cloudiness=50.0,
+            source=source,
+        )
+
+    previous = WeatherForecastDB(
+        park_id=park_id,
+        fetched_at=previous_fetched_at,
+        forecast_location="Provider Fallback Park",
+        **point("fmi_edited", timestamp, 4.0).model_dump(),
+    )
+    db.add(previous)
+    db.flush()
+    previous_id = previous.id
+    db.commit()
+
+    fmi = WeatherResponse(
+        forecast_location="Provider Fallback Park",
+        forecasts=[point("fmi_edited", timestamp, 5.0)],
+    )
+    ecmwf = WeatherResponse(
+        forecast_location="Unknown",
+        forecasts=[
+            point("ecmwf", timestamp, 7.0),
+            point("ecmwf", timestamp + timedelta(hours=1), 8.0),
+        ],
+    )
+
+    calls = []
+
+    def fetch_fmi(latitude, longitude):
+        calls.append("fmi_edited")
+        if "fmi_edited" in failed_sources:
+            raise WeatherProviderError("FMI unavailable")
+        return fmi
+
+    def fetch_ecmwf(latitude, longitude):
+        calls.append("ecmwf")
+        if "ecmwf" in failed_sources:
+            raise WeatherProviderError("ECMWF unavailable")
+        return ecmwf
+
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_fmi_edited_forecast",
+        fetch_fmi,
+    )
+    monkeypatch.setattr(
+        weather_forecast,
+        "get_ecmwf_forecast",
+        fetch_ecmwf,
+    )
+
+    refresh_response = client.post("/api/parks/provider-fallback-park/weather/refresh")
+
+    assert refresh_response.status_code == expected_status
+    assert calls == ["fmi_edited", "ecmwf"]
+
+    if expected_status == 200:
+        assert refresh_response.json() == {
+            "status": "ok",
+            "saved_rows": saved_rows,
+        }
+    else:
+        assert refresh_response.json() == {
+            "detail": "Weather forecast provider unavailable",
+        }
+
+    db.expire_all()
+    rows = (
+        db.query(WeatherForecastDB).filter(WeatherForecastDB.park_id == park_id).all()
+    )
+
+    assert len(rows) == 1 + saved_rows
+
+    preserved = next(row for row in rows if row.id == previous_id)
+    assert preserved.fetched_at == previous_fetched_at
+    assert preserved.wind_speed == 4.0
+
+    new_rows = [row for row in rows if row.id != previous_id]
+
+    if saved_rows:
+        assert len({row.fetched_at for row in new_rows}) == 1
+        assert all(row.fetched_at > previous_fetched_at for row in new_rows)
+        assert {row.source for row in new_rows} == (
+            {"fmi_edited", "ecmwf"} - failed_sources
+        )
+        expected_fetched_at = new_rows[0].fetched_at
+    else:
+        assert new_rows == []
+        expected_fetched_at = previous_fetched_at
+
+    response = client.get("/api/parks/provider-fallback-park/weather")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert [item["wind_speed"] for item in data["forecasts"]] == expected_winds
+    assert datetime.fromisoformat(data["fetched_at"]) == expected_fetched_at
+
+    expected_sources = (
+        {"fmi_edited", "ecmwf"} - failed_sources if saved_rows else {"fmi_edited"}
+    )
+    assert {item["source"] for item in data["forecasts"]} == expected_sources
