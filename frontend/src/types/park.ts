@@ -1,8 +1,7 @@
-
 export interface Cable {
-  name: string;
+  name: string | null;
   booking_url: string;
-  booking_url_fi: string;
+  booking_url_fi: string | null;
 }
 
 export interface Park {
@@ -13,9 +12,9 @@ export interface Park {
   country: string;
   latitude: number;
   longitude: number;
-  water_type: string;
+  water_type: "sea" | "lake";
   website_url: string;
-  website_url_fi: string;
+  website_url_fi: string | null;
   timezone: string;
   is_active: boolean;
   cables: Cable[];
