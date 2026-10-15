@@ -24,3 +24,6 @@ coverage/
 
 # IDE
 .idea/
+
+# Probably unnecessary docs regarding operational logic
+/backend/docs/
