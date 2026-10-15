@@ -26,7 +26,9 @@ def get_ecmwf_forecast(
         "longitude": longitude,
         "hourly": ",".join(ECMWF_FIELD_MAP.keys()),
         "wind_speed_unit": "ms",
-        "forecast_days": 10,
+        # Includes today in UTC; 11 days cover the next 10 full Finnish local days
+        # when the provider supplies all requested hours.
+        "forecast_days": 11,
         "timezone": "UTC",
     }
 
