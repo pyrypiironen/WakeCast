@@ -229,11 +229,22 @@ def test_supported_populated_upgrade_preserves_data_and_constraints(migration_db
 
     for name, expected in before.items():
         actual = rows(connection, name)
+
         if name == "parks":
-            expected[0].update(observation_station_id=1, water_temperature_station_id=1)
+            expected[0].update(
+                observation_station_id=1,
+                water_temperature_station_id=1,
+                website_url_fi=None,
+            )
+
+        if name == "cables":
+            expected[0]["booking_url_fi"] = None
+
         if name == "weather_observations":
             expected[0].pop("water_temperature")
+
         assert actual == expected
+
     assert rows(connection, "water_temperature_observations") == water_before
     assert_rejected(
         connection,

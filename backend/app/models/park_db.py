@@ -29,6 +29,10 @@ class ParkDB(Base):
     water_type: Mapped[str] = mapped_column(String(20))
 
     website_url: Mapped[str] = mapped_column(String(500))
+    website_url_fi: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
 
     timezone: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -77,6 +81,10 @@ class CableDB(Base):
     name: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     booking_url: Mapped[str] = mapped_column(String(500))
+    booking_url_fi: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
 
     park: Mapped[ParkDB] = relationship(
         back_populates="cables",

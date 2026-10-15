@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, HttpUrl
 class Cable(BaseModel):
     name: str | None = None
     booking_url: HttpUrl
+    booking_url_fi: HttpUrl | None = None
 
 
 class Park(BaseModel):
@@ -23,6 +24,7 @@ class Park(BaseModel):
     water_type: Literal["sea", "lake"]
 
     website_url: HttpUrl
+    website_url_fi: HttpUrl | None = None
 
     timezone: str
     is_active: bool = True
