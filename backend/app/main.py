@@ -16,6 +16,7 @@ from app.models.weather import (
     WeatherForecast,
     WeatherResponse,
 )
+from app.routes.history import router as history_router
 from app.security import require_refresh_api_key
 from app.services.water_temperature_storage import (
     get_latest_water_temperature_observation,
@@ -66,6 +67,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+app.include_router(history_router)
 
 
 @app.get("/health")
