@@ -64,6 +64,7 @@ export default function DailyForecastView({
     { key: "water", label: t.water, unit: "°C" },
     { key: "wind", label: t.wind, unit: "m/s" },
     { key: "gust", label: t.gust, unit: "m/s" },
+    { key: "cloud", label: t.cloud, unit: "%" },
   ] as const;
 
   return (

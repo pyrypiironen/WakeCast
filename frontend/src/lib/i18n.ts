@@ -53,6 +53,7 @@ export const translations = {
       dayStart: "Start of day",
       dayEnd: "End of day",
       unknownTime: "Time cannot be determined",
+      cloud: "Cloudiness",
     },
     parkPage: {
       back: "Back to wakeparks",
@@ -122,6 +123,7 @@ export const translations = {
       dayStart: "Vuorokauden alku",
       dayEnd: "Vuorokauden loppu",
       unknownTime: "Ajankohtaa ei voida määrittää",
+      cloud: "Pilvisyys",
     },
     parkPage: {
       back: "Takaisin wakeparkkeihin",

@@ -57,7 +57,7 @@
 
 .grid {
   stroke: #b8cfdf;
-  stroke-opacity: 0.5;
+  stroke-opacity: 0.70;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -88,7 +88,11 @@
 }
 
 .plotBackground {
-  fill: light-dark(#ffffff, #dcebf5);
+  fill: #cfe5f4;
+}
+
+.cloudShading {
+  fill: #b7ddf5;
 }
 
 .cloudUnit {

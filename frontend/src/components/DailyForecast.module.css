@@ -108,6 +108,12 @@
   border-color: #287bb5;
 }
 
+.cloud {
+  height: 0.75rem;
+  border: 1px solid #a7d4f2;
+  background-color: #cfe5f4;
+}
+
 .placeholder {
   padding-block: 1rem;
   color: var(--color-muted);

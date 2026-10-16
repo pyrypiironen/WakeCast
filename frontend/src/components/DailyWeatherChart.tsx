@@ -67,6 +67,53 @@ const startMs = visibleRange.start.getTime();
 const endMs = visibleRange.end.getTime();
 const durationMs = endMs - startMs;
 
+// CloudSeries calculation
+const cloudSeries = [
+  ...buildLineSeries(
+    observations.map((point) => ({
+      timestamp: point.timestamp,
+      value: point.cloudiness,
+      source: point.source,
+      intervalMinutes: point.resolution_minutes,
+    })),
+  ).segments,
+
+  ...buildLineSeries(
+    forecasts.map((point) => ({
+      timestamp: point.timestamp,
+      value: point.cloudiness,
+      source: point.source,
+      intervalMinutes: 60,
+    })),
+    { connectSourceChanges: true },
+  ).segments,
+];
+
+// New cloudBridge code
+const lastCloudObservation = observations.at(-1);
+const firstCloudForecast = forecasts[0];
+
+const cloudBridge = measuredForecastBridge(
+  lastCloudObservation
+    ? {
+        timestamp: lastCloudObservation.timestamp,
+        value: lastCloudObservation.cloudiness,
+        source: lastCloudObservation.source,
+        intervalMinutes: lastCloudObservation.resolution_minutes,
+      }
+    : undefined,
+  firstCloudForecast
+    ? {
+        timestamp: firstCloudForecast.timestamp,
+        value: firstCloudForecast.cloudiness,
+        source: firstCloudForecast.source,
+        intervalMinutes: 60,
+      }
+    : undefined,
+  2 * HOUR_MS,
+);
+
+// Existing weather-series definitions
   const definitions = [
   { field: "wind_speed", label: t.wind, color: "#298A63", axis: "wind" },
   { field: "wind_gust", label: t.gust, color: "#73AD7E", axis: "wind" },
@@ -155,6 +202,11 @@ const transitionLines = definitions.flatMap((definition) => {
     return BOTTOM -
       ((value - scale.min) / (scale.max - scale.min)) * (BOTTOM - TOP);
   }
+
+  function cloudY(value: number): number {
+  const percentage = Math.max(0, Math.min(100, value));
+  return TOP + (BOTTOM - TOP) * (percentage / 100);
+}
 
   const clock = new Intl.DateTimeFormat(
     locale === "fi" ? "fi-FI" : "en-GB",
@@ -263,15 +315,24 @@ timeTicks.push(endMs);
           <desc>{t.chartDescription}</desc>
 
           <defs>
-            <clipPath id={clipId}>
-              <rect
-                x={LEFT}
-                y={TOP}
-                width={RIGHT - LEFT}
-                height={BOTTOM - TOP}
-              />
-            </clipPath>
-          </defs>
+  <clipPath id={clipId}>
+    <rect
+      x={LEFT}
+      y={TOP}
+      width={RIGHT - LEFT}
+      height={BOTTOM - TOP}
+    />
+  </clipPath>
+
+  <pattern
+  id={`${clipId}-missing-cloud`}
+  width={8}
+  height={8}
+  patternUnits="userSpaceOnUse"
+>
+  <rect width={8} height={8} fill="#ffffff" />
+</pattern>
+</defs>
 
           {/* Background inside the plotting area only */}
 <rect
@@ -281,6 +342,86 @@ timeTicks.push(endMs);
   height={BOTTOM - TOP}
   className={styles.plotBackground}
 />
+
+{/* Missing cloudiness data: white with diagonal stripes */}
+<g clipPath={`url(#${clipId})`}>
+  <rect
+    x={LEFT}
+    y={TOP}
+    width={RIGHT - LEFT}
+    height={BOTTOM - TOP}
+    fill={`url(#${clipId}-missing-cloud)`}
+  />
+
+  {/* Restore blue sky wherever valid cloudiness data exists */}
+  {cloudSeries.map((segment, index) => {
+    if (segment.length < 2) return null;
+
+    const first = segment[0];
+    const last = segment[segment.length - 1];
+
+    return (
+      <rect
+        key={`cloud-data-${index}`}
+        x={x(first.time)}
+        y={TOP}
+        width={x(last.time) - x(first.time)}
+        height={BOTTOM - TOP}
+        className={styles.plotBackground}
+      />
+    );
+  })}
+
+  {/* Measurement-to-forecast transition */}
+  {cloudBridge && (
+    <rect
+      x={x(cloudBridge[0].time)}
+      y={TOP}
+      width={x(cloudBridge[1].time) - x(cloudBridge[0].time)}
+      height={BOTTOM - TOP}
+      className={styles.plotBackground}
+    />
+  )}
+</g>
+
+{/* Continuous cloudiness shading */}
+<g clipPath={`url(#${clipId})`}>
+  {cloudSeries.map((segment, index) => {
+    if (segment.length < 2) return null;
+
+    const first = segment[0];
+    const last = segment[segment.length - 1];
+
+    const points = [
+      `${x(first.time)},${TOP}`,
+      ...segment.map(
+        (point) => `${x(point.time)},${cloudY(point.value)}`,
+      ),
+      `${x(last.time)},${TOP}`,
+    ].join(" ");
+
+    return (
+      <polygon
+        key={`cloud-segment-${index}`}
+        points={points}
+        className={styles.cloudShading}
+      />
+    );
+  })}
+
+  {cloudBridge && (
+    <polygon
+      points={[
+        `${x(cloudBridge[0].time)},${TOP}`,
+        ...cloudBridge.map(
+          (point) => `${x(point.time)},${cloudY(point.value)}`,
+        ),
+        `${x(cloudBridge[1].time)},${TOP}`,
+      ].join(" ")}
+      className={styles.cloudShading}
+    />
+  )}
+</g>
 
 <text
   x={LEFT - 12}
