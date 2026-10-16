@@ -37,10 +37,11 @@ export function selectDailyAirWeather(
   const endMs = end.getTime();
   const referenceMs = parseTimestamp(input.requestedAt).getTime();
 
-  function withinDay(timestamp: string): boolean {
-    const time = parseTimestamp(timestamp).getTime();
-    return time >= startMs && time < endMs;
-  }
+  // Include the following midnight only as the chart's closing point.
+function withinDay(timestamp: string): boolean {
+  const time = parseTimestamp(timestamp).getTime();
+  return time >= startMs && time <= endMs;
+}
 
   function byTimestamp(
     a: { timestamp: string },

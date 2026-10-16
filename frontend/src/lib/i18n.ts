@@ -25,7 +25,7 @@ export const translations = {
       legend: "Chart legend",
       wind: "Wind",
       gust: "Gusts",
-      air: "Air temperature",
+      air: "Temperature",
       water: "Water temperature",
       forecasts: "Forecast",
       observations: "Weather observations",

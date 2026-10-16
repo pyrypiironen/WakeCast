@@ -8,6 +8,7 @@ import {
   measuredForecastBridge,
 } from "@/lib/chart-lines";
 import { selectDailyAirWeather } from "@/lib/daily-series";
+import { selectDailyWater } from "@/lib/daily-water";
 import type { DailyWeatherData } from "@/lib/daily-weather";
 import {
   formatLocalDate,
@@ -57,6 +58,38 @@ export default function DailyWeatherChart({
   const forecasts = daily.forecasts.status === "ok"
     ? daily.forecasts.data.forecasts
     : [];
+
+  // Select actual water-temperature measurements for the day.
+const dailyWater = selectDailyWater(
+  data,
+  selectedDate,
+  timeZone,
+);
+
+const waterHistory = dailyWater.water.status === "ok"
+  ? dailyWater.water.data
+  : null;
+
+const waterReadings = waterHistory?.observations ?? [];
+
+// A preceding reading may establish the held temperature
+// at the beginning of a day containing new measurements.
+// Never draw a line beyond the day's last actual reading.
+const waterPoints = waterReadings.length === 0
+  ? []
+  : [
+      ...(waterHistory?.preceding_observation
+        ? [{
+            time: Date.parse(dailyWater.start),
+            value: waterHistory.preceding_observation.water_temperature,
+          }]
+        : []),
+
+      ...waterReadings.map((point) => ({
+        time: Date.parse(point.timestamp),
+        value: point.water_temperature,
+      })),
+    ];
 
   const visibleRange = getChartWindowRange(
     selectedDate,
@@ -185,14 +218,17 @@ const transitionLines = definitions.flatMap((definition) => {
   );
 
   const temperatureScale = createChartScale(
-    series
+  [
+    ...series
       .filter((item) => item.axis === "temperature")
       .flatMap((item) => item.segments.flatMap(
         (segment) => segment.map((point) => point.value),
       )),
-    0,
-    40,
-  );
+    ...waterPoints.map((point) => point.value),
+  ],
+  0,
+  40,
+);
 
   function x(time: number): number {
     return LEFT + ((time - startMs) / durationMs) * (RIGHT - LEFT);
@@ -203,6 +239,21 @@ const transitionLines = definitions.flatMap((definition) => {
     return BOTTOM -
       ((value - scale.min) / (scale.max - scale.min)) * (BOTTOM - TOP);
   }
+
+  // Step-shaped line: hold each reading until the next measurement.
+// The path ends at the last measured timestamp.
+const waterPath = waterPoints.length > 1
+  ? waterPoints.map((point, index) => {
+      const pointX = x(point.time);
+      const pointY = y(point.value, "temperature");
+
+      if (index === 0) {
+        return `M ${pointX} ${pointY}`;
+      }
+
+      return `H ${pointX} V ${pointY}`;
+    }).join(" ")
+  : null;
 
   function cloudY(value: number): number {
   const percentage = Math.max(0, Math.min(100, value));
@@ -498,6 +549,48 @@ const sourceChanges = Array.from(
     {value}%
   </text>
 ))}
+
+{/* Historical water temperature — measurements only */}
+<g clipPath={`url(#${clipId})`}>
+  {waterPath && (
+    <path
+      d={waterPath}
+      fill="none"
+      stroke="#287BB5"
+      strokeWidth={1.5}
+      vectorEffect="non-scaling-stroke"
+    >
+      <title>
+        {t.water} — {t.measured}
+      </title>
+    </path>
+  )}
+
+  {/* Actual measurement timestamps */}
+  {waterReadings.map((point) => {
+    const measuredAt = new Date(point.timestamp);
+
+    return (
+      <circle
+        key={point.timestamp}
+        cx={x(measuredAt.getTime())}
+        cy={y(point.water_temperature, "temperature")}
+        r={1.75}
+        fill="#287BB5"
+      >
+        <title>
+          {`${t.water}: ${point.water_temperature} °C — ${formatLocalDate(
+            measuredAt,
+            timeZone,
+            locale,
+          )} ${formatLocalTime(measuredAt, timeZone, locale)} — ${
+            waterHistory?.observation_location ?? ""
+          }`}
+        </title>
+      </circle>
+    );
+  })}
+</g>
 
 {/* Measurement and forecast lines */}
 <g clipPath={`url(#${clipId})`}>

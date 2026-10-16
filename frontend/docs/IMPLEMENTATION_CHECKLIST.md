@@ -1,71 +1,155 @@
-# WakeCast frontend implementation checklist
+# WakeCast.fi — Frontend Implementation Checklist
 
-This is the source of truth for Work mode. Checkbox status: [x] completed and verified previously, [ ] not yet completed. An item must be verified before changing it to [x]. Never mark proposed code as complete without running checks.
+**Updated:** 2026-10-17  
+**Reference:** GitHub `main` branch (`pyrypiironen/WakeCast`), current frontend code and agreed WakeCast design.  
+**Purpose:** Source of truth for frontend development progress and remaining MVP work.
 
-## 0. Preparation (pre-implementation handoff)
-- [x] 0.1 Record agreed homepage/park/chart/compass/table UX and language requirements in `frontend/docs/DESIGN_SPEC.md`.
-- [x] 0.2 Inventory existing GitHub main-branch API/model fields; record confirmed backend gaps (observations route, historical water-temperature route, nullable rain probability / provider precedence).
-- [x] 0.3 Prepare revised `frontend/AGENTS.md` instructions, preserving Next-generated block. **Handoff file prepared, not yet installed into repository.**
-- [ ] 0.4 At start of Work mode, inspect actual local working tree/branches and reconcile any changes since GitHub review; install/reconcile these documents into repo on an authorized feature branch.
-- [ ] 0.5 Resolve any conflicts with root `AGENTS.md`, especially its full-checklist-in-every-response instruction: user wants the active top-level section only in normal replies, full checklist when requested/transitioning sections.
+## Status rules
 
-## 1. Frontend Foundation
-- [x] 1.1 Review existing frontend structure and dependencies (Next.js/React/TypeScript/Tailwind).
-- [x] 1.2 Establish frontend architecture, locale routing, and initial API integration (`/en`, `/fi`, typed parks API).
-- [ ] 1.3 Design and implement responsive shared layout and navigation: header/logo, language switcher, content width, homepage/park page skeletons; EN/FI UX; keyboard/mobile checks.
-  - Implemented shared locale layout, header, language navigation, skip link, responsive width/spacing and localized empty/error handling; preserved the existing simple names/count. No park-detail route was added, per the Section 1 task restriction. Production HTTP checks passed for `/en`, `/fi`, `/` redirect and unsupported locale. Visual/keyboard browser checks remain pending: Chromium was unavailable and its download failed in this environment.
-- [ ] 1.4 Inventory live API route payloads/DB relationships, sample forecast horizons, observed station mapping, and data freshness; confirm UI data contract and missing/null semantics before weather implementation.
-  - Source contract/relationship audit completed against `034196b`; both history routes are now implemented and registered. See `API_CONTRACT.md`. Live response samples, actual station configuration, forecast horizon/PoP coverage and freshness remain pending because no live backend is reachable here.
-- [x] 1.5 Introduce shared typed weather models/API client methods, formatting utilities (m/s, °C, %, bearing, provenance) and park-timezone date helpers; test DST-sensitive cases.
-  - Verified: 16 Node tests passed, TypeScript validation, ESLint and production build passed. No new package dependencies; no observation/forecast composition or charts added.
+- `[x]` — Implemented and supported by existing code and/or previously reported verification.
+- `[ ]` — Not implemented, not completely verified, or still requiring work.
+- A partially completed parent item remains unchecked; completed subitems are shown separately.
+- Do not claim tests were rerun, browser behavior verified, or a commit pushed unless that happened during the relevant task.
+- Source-code review confirms what exists in `main`, not the state of any uncommitted local files or a running deployment.
+- Preserve observed-vs-forecast provenance, actual sample timestamps, and missing/null values; do not fabricate weather data.
 
-## 2. Wakepark Pages
-- [ ] 2.1 Compact clickable park-list rows on homepage; desktop single-row conditions and mobile wrap; weather icon, temperature, wind/gust, water. Show loading/error/unavailable states; source/time labels.
-- [x] 2.2 Localized park detail page route and main hierarchy: park metadata, current conditions, daily graph, weekly graph, detailed table, booking information.
-- [x] 2.3 Cable details, booking links and website URL with `_fi` fallbacks to English where unavailable; valid external-link semantics.
-  - Verified for 2.2–2.3: localized `/en/parks/[slug]` and `/fi/parks/[slug]`, server-side park metadata, HTTP 404 and localized not-found boundary, unavailable/retry states, slug-preserving language links, Finnish/default website and cable URLs, nullable cable names and empty cables. Current conditions, daily/weekly charts and detailed data are structural placeholders only; no weather requests or aggregation added.
-  - Validation: TypeScript, ESLint, 16 existing unit tests, production build and 11 production-route subtests (12 passing including their parent test). Run `npm run build && npm run test:parks` for route tests with a local mock API. Next 16.4 renders the 404 boundary from Flight data on the client; tests verify HTTP status and serialized localized content. Visual/mobile/keyboard and 404 hydration checks remain manual: Chromium download failed in this environment. Other checklist statuses were intentionally preserved.
-- [ ] 2.4 Current conditions aggregation: latest real observations when available, forecast fallback explicitly labeled, wind direction FROM bearing, air/water weather sources and timestamps.
-- [ ] 2.5 Replaceable compass illustration + dynamic wind arrow; initially generic compass backdrop; support future user-supplied north-oriented aerial image with marked cables, without rewriting arrow logic.
+## 0. Preparation, specifications and workflow
 
-## 3. Weather Dashboard and Backend Readiness
-- [ ] 3.1 Integrate and verify prepared read-only park observation-history endpoint `/api/parks/{slug}/weather/observations`, with bounded aware [start,end) query, station metadata, raw stored timestamps, no provider calls. See separate backend patch bundle; implementation prepared but NOT applied.
-- [ ] 3.2 Integrate and verify prepared read-only park water-temperature-history endpoint `/api/parks/{slug}/water-temperature/history`, with actual reading timestamps, source/station location and bounded queries. Preserve the existing latest-reading route; implementation prepared but NOT applied.
-- [ ] 3.3 Verify actual 10-day forecast coverage and non-null FMI `PoP` values per timestamp (official edited product spans up to 240h). Display rain probability ONLY where non-null, including FMI-preferred overlapping timestamps; never invent 0% for ECMWF `null`.
-- [ ] 3.4 Implement unified UI series/observation-vs-forecast composition and explicit source attribution, missing-value policy, current-time divider and historical-only water-temperature line / last-known-value disclosure; NO extension into future slots. Test station delay, overlapping points, empty data and DST boundaries.
-- [ ] 3.5 Implement the daily LOCAL calendar day weather graph, hourly timeline, four thin lines, dual independent axes (wind 0–15 m/s; temperature 0–40 °C, adaptive), subtle cloudiness background and rain-probability boxes below.
-- [ ] 3.6 Implement daily navigation across supported historical/future days, today shortcut, loading/errors, no fabricated historical samples.
-- [ ] 3.7 Implement weekly chart with identical styling at 3-hour resolution and exactly two pages: (today−3 .. today+3) and (tomorrow .. today+7).
-- [ ] 3.8 Implement tooltip and inspection interactions on hover, touch and keyboard, with values, observation/forecast source, water-temperature observation time, and measured precipitation amount (mm).
-- [ ] 3.9 Implement ONE collapsed-by-default detailed data table below charts. One local day per page, hourly rows (23/24/25 as applicable), back through historical observations and forward up to 10 days where coverage exists; numeric columns matching chart plus source, measured precipitation amount (mm) and wind direction where available.
-- [ ] 3.10 On current-day table, add distinctive observed/forecast styling, explicit source column and NOW divider independent of delayed-observation boundary; ensure data is never silently reclassified as measured.
-- [ ] 3.11 Verify weather icon derivation and labels for cloudiness, day/night and precipitation, with honest limitations where data does not support a claim.
+- [x] **0.1** Document homepage, park-page, chart, compass, table and bilingual UX requirements in `frontend/docs/DESIGN_SPEC.md`.
+- [x] **0.2** Audit the backend weather and water API contracts in `frontend/docs/API_CONTRACT.md`.
+- [x] **0.3** Install frontend-specific guidance in `frontend/AGENTS.md`, preserving the Next.js-generated instructions.
+- [x] **0.4** Establish and publish the frontend foundation; merge the feature work into `main`.
+- [ ] **0.5** Refresh outdated documentation (`DESIGN_SPEC.md`, `API_CONTRACT.md`, `FOUNDATION_HANDOFF.md`) after implementation and reconcile any old statements that history endpoints or the daily chart are still only planned.
+- [ ] **0.6** Reconcile the conflicting checklist-output preferences in root `AGENTS.md` and `frontend/AGENTS.md`. Until explicitly changed, follow the applicable repository instructions; do not silently overwrite them.
+- [ ] **0.7** At each future task, inspect the current branch and local working-tree status before making changes.
 
-## 4. User Experience
-- [ ] 4.1 Responsive charts, tooltip and detailed table on phones/tablets/desktops; accessible scrolling/time reading.
-- [ ] 4.2 Loading, API error, stale, missing measurement and partial forecast-coverage states; distinguish no rain (0) from unknown (`null`).
-- [ ] 4.3 Forecast `fetched_at`, coverage/availability and measurement observation-time/freshness indicators; correct forecast-vs-measurement source disclosures: a clickable circled `!` by current weather/water values opens actual provider, station name, measurement timestamp and freshness; do not imply sensors at the park.
-- [ ] 4.4 Consistent visual design, labels, contrast (color never sole indicator), keyboard/touch accessibility, EN/FI translations, responsive header and semantic headings.
-- [ ] 4.5 Verify visualization performance and network behavior (server data loading, avoiding repeated per-point API requests, reasonable caching/refresh behavior).
+**Git workflow note:** The user has chosen to perform their own work directly on `main`. Root `AGENTS.md` separately instructs AI agents not to modify `main` directly and not to commit, push or merge without task-specific authorization. That restriction remains in effect unless the repository instructions are explicitly updated. The user can still run their own Git commands on `main`.
 
-## 5. Final Verification and MVP Review
-- [ ] 5.1 Unit and component tests for localized time grouping, DST boundaries, forecast precedence, null handling, water-temperature carry-forward, chart series and table navigation.
-- [ ] 5.2 Backend tests for new read-only endpoints, authorization boundaries if needed, station associations, date filters and empty data; full backend pytest + Ruff if backend changed.
-- [ ] 5.3 Frontend TypeScript, ESLint, production build and meaningful UI tests; don't claim results without execution.
-- [ ] 5.4 Frontend/backend end-to-end manual verification of homepage, park details, daily & weekly windows, current-day measured/forecast split, historical table, EN/FI and mobile.
-- [ ] 5.5 Final MVP review against `DESIGN_SPEC.md`; summarize changed files, test results, backend limitations, deferred work, and require authorization for any commit/push/merge.
+## 1. Frontend foundation and shared architecture
 
-## 6. Explicitly deferred
-- [ ] 6.1 User-created aerial park image with marked cables (the compass component must support replacing backdrop when available).
-- [ ] 6.2 Rain radar below charts, selecting a legal/usable radar data provider and displaying proper attribution.
-- [ ] 6.3 Dedicated long-term historical analysis page, forecast accuracy analytics and further weather metrics, only after separate authorization.
+- [x] **1.1** Establish Next.js 16, React 19, TypeScript and Tailwind CSS 4 frontend architecture.
+- [x] **1.2** Implement `/en` and `/fi` locale routing, language switching and localized text.
+- [x] **1.3a** Build shared header, navigation, skip link, responsive content container and basic error/empty states.
+- [ ] **1.3b** Finish mobile, visual, keyboard, focus and accessibility verification of shared layout and navigation.
+- [x] **1.4a** Define typed parks, forecasts, weather-observation history and water-temperature API payloads.
+- [x] **1.4b** Connect server-side API requests for parks, forecasts, observation history and water-temperature history.
+- [ ] **1.4c** Verify actual live data across representative parks: station assignments, earliest/latest samples, staleness, response gaps, FMI PoP availability and local-day forecast horizon.
+- [x] **1.5** Implement formatting and timezone utilities, including DST-sensitive day boundaries and associated unit tests.
+- [x] **1.6** Implement shared light/dark theme variables.
+- [x] **1.7** Centralize chart sky/cloud color variables in `globals.css`; use the same cloud color in chart and legend.
 
-## Work mode operating protocol
-1. Read root `AGENTS.md`, `frontend/AGENTS.md`, `frontend/docs/DESIGN_SPEC.md`, this checklist, and the relevant Next.js docs inside `frontend/node_modules/next/dist/docs/` before frontend code.
-2. Inspect the current branch and local modifications. Root AGENTS requires a dedicated feature branch, no changes on `main`; never commit, push, merge or migrate a database without specific authorization.
-3. Before each development task, state the CURRENT checklist item, inspected files, expected edits and test plan. Implement ONE item or a tightly coupled prerequisite at a time; stop for user review.
-4. Label any code presented in chat as **COMPLETE FILE** or **PARTIAL CHANGE**. Use full file for shorter modules and precise patches for small edits; keep URLs unbroken.
-5. Run only relevant checks first; full backend pytest + Ruff once when finishing backend changes; `npx tsc --noEmit`, `npm run lint`, and build where relevant. Use the database-test safety rules.
-6. Never invent missing API fields, fake forecast probability, fill unknown observations or confuse park/location vs nearby observation station.
-7. Begin normal status responses with CURRENT TOP-LEVEL checklist section only (user preference); show full list upon explicit request or upon moving to another top-level section.
-8. Stop and ask about architecture/provider changes or new external dependencies. Keep source-specific logic separate.
+## 2. Wakepark pages and current conditions
+
+- [ ] **2.1** Replace the homepage's basic park list with compact, clickable park rows showing an icon, air temperature, wind speed/gust, water temperature and source/time details; wrap cleanly on mobile.
+- [x] **2.2** Implement localized park detail route `/[lang]/parks/[slug]`, metadata, error/not-found states and structural current/daily/weekly/table sections.
+- [x] **2.3** Display cables, website and booking links, with Finnish URL fallback where available.
+- [x] **2.4a** Connect the daily forecast component to each park detail page.
+- [ ] **2.4b** Implement current-conditions aggregation: latest actual weather/water observations, explicit forecast fallback, sample timestamps and freshness; never present forecasts as measurements.
+- [ ] **2.5** Add a generic replaceable compass backdrop and meteorological wind-direction arrow (wind direction is the direction FROM which wind blows).
+- [ ] **2.6** Add current-conditions weather icons with day/night, cloudiness and precipitation logic supported by real data.
+- [ ] **2.7** Add clickable/tappable source-details disclosure by current conditions, including providers, nearby station names and true sample times.
+
+## 3. Daily weather chart and data readiness
+
+### 3.1 Backend integration and data selection
+
+- [x] **3.1** Implement and integrate read-only `/api/parks/{slug}/weather/observations` with bounded, timezone-aware `[start,end)` queries and station metadata.
+- [x] **3.2** Implement and integrate read-only `/api/parks/{slug}/water-temperature/history`; preserve true reading timestamps, source/station metadata and preceding observation.
+- [ ] **3.3** Verify actual forecast coverage for the intended next ~10 days, including gaps and non-null FMI precipitation probability (`PoP`) values. Never replace unknown (`null`) with 0%.
+- [x] **3.4a** Compose local-day weather observations and future forecasts as separate series without interpolating missing readings.
+- [x] **3.4b** Implement continuity rules and visible breaks for invalid/missing samples and forecast source changes.
+- [x] **3.4c** Implement `selectDailyWater()` and tested held-interval selection as frontend data utilities.
+- [ ] **3.4d** Render measured water temperature on the chart and clearly disclose the true measurement timestamp; do not extend the line beyond the latest actual reading or into forecast-only time.
+- [ ] **3.4e** Add explicit NOW divider independent of observation delays and tests for source precedence, unavailable data and edge cases.
+
+### 3.2 Completed daily chart UI
+
+- [x] **3.5a** Render wind speed, wind gust and air temperature as thin colored SVG curves.
+- [x] **3.5b** Render temperature and wind on independent, adaptive vertical scales with hourly time gridlines.
+- [x] **3.5c** Implement park-local day navigation: previous day, today and next day.
+- [x] **3.5d** Implement 09:00–21:00 and 24-hour chart display modes.
+- [x] **3.5e** Draw solid observation lines and dashed forecast lines, including valid measured-to-forecast connections.
+- [x] **3.5f** Draw continuous cloudiness shading, filled vertically from the bottom to represent the 0–100% percentage.
+- [x] **3.5g** Distinguish missing cloudiness coverage (white) from a valid 0% reading (sky color).
+- [x] **3.5h** Add a cloudiness percentage scale, hourly grid and legible day-end axis labels.
+- [x] **3.5i** Add a five-item bilingual legend: air, water, wind, gust and cloudiness. Note: the water entry is a legend placeholder until its curve is implemented.
+- [x] **3.5j** Use centralized sky/cloud CSS variables; support light/dark cloud shades and keep legend color synchronized.
+- [x] **3.5k** Show a compact localized source-information line with readable labels for FMI, ECMWF, HARMONIE, SYKE and UiRaS.
+- [x] **3.5l** Replace the gap/source-change dropdown with numbered source-change markers and a plain-text explanation at the very bottom of the chart caption.
+- [x] **3.5m** Remove the redundant “Day length” caption and duplicate availability display.
+
+### 3.3 Remaining daily chart features
+
+- [ ] **3.6** Add the actual water-temperature history line, preserving measurement provenance and stopping at the last valid measurement.
+- [ ] **3.7** Add an aligned precipitation-probability (%) row below the plot, only where provided by the forecast. Keep measured precipitation amounts (mm) separate.
+- [ ] **3.8** Add hover, touch and keyboard-accessible tooltip/inspection of timestamp, wind, gusts, temperatures, cloudiness, precipitation and source details.
+- [ ] **3.9** Add an explicit NOW marker at the current park-local time.
+- [ ] **3.10** Verify continuity, clipping, provider changes, DST, null cloudiness, observation/forecast transitions and source-marker numbering with focused tests.
+- [ ] **3.11** Check actual water-provider source identifiers against display-name mapping (e.g. backend `UIRA` vs frontend `uiras`) to ensure `UiRaS` is displayed consistently.
+- [ ] **3.12** Validate no-data, future-day, partial-coverage and stale-state messaging in real browser flows.
+
+## 4. Weekly weather chart
+
+- [ ] **4.1** Implement the weekly graph using the daily chart's axes, weather colors and data semantics.
+- [ ] **4.2** Use 3-hour plotting intervals without inventing missing observations or forecasts.
+- [ ] **4.3** Provide exactly two agreed views: `today−3 … today+3` and `tomorrow … today+7` (local days).
+- [ ] **4.4** Plot available historical observations, future forecasts, actual water readings and cloudiness correctly; do not extrapolate measured water into future periods.
+- [ ] **4.5** Add source/freshness disclosure, forecast gaps and precipitation probability where genuinely available.
+- [ ] **4.6** Verify responsiveness, touch/keyboard interaction, locales and DST/timezone behavior.
+
+## 5. Detailed weather-data table
+
+- [ ] **5.1** Implement ONE collapsed-by-default detailed table beneath the charts.
+- [ ] **5.2** Support one local calendar day per page, with previous/next day navigation and 23/24/25 hourly rows where appropriate.
+- [ ] **5.3** Include wind, gusts, air/water temperatures, cloudiness, precipitation probability, measured/forecast precipitation amount, wind direction and source when available.
+- [ ] **5.4** Visually distinguish observation rows from forecast rows and add a NOW divider on the current day.
+- [ ] **5.5** Show measurement timestamp and station/source provenance, especially when the last water reading is carried forward.
+- [ ] **5.6** Handle unavailable or partial data without substituting zeros; provide a usable mobile horizontally scrollable table and accessible controls.
+
+## 6. General user experience and data integrity
+
+- [x] **6.1a** Apply an initial coherent visual system with responsive navigation, chart/legend styling, shared CSS color variables and EN/FI labels.
+- [ ] **6.1b** Finish contrast, keyboard navigation, touch-target, screen-reader and narrow-screen visual checks across all implemented pages.
+- [ ] **6.2** Audit API errors, stale weather/water data, null-versus-zero semantics, provider gaps and partial-day forecast coverage.
+- [ ] **6.3** Expose timestamps, `fetched_at`, forecast coverage, observation locations and freshness without implying that nearby stations are on-park sensors.
+- [ ] **6.4** Assess frontend performance, responsive SVG rendering, API request behavior and refresh/caching strategy.
+- [ ] **6.5** Add a dedicated localized **Data Sources / Tietolähteet** page with providers, attribution, intermediary API services (including Open-Meteo) and applicable licensing terms.
+
+## 7. Verification and MVP review
+
+- [x] **7.1a** Create unit tests for API clients, date/format helpers, daily series, water held intervals and chart-line utilities.
+- [x] **7.1b** Perform previously reported daily chart unit/TypeScript/lint and browser spot-checks during development.
+- [ ] **7.1c** Add regression tests for newly added cloud rendering, provider labels, source-change caption, and water/rain/NOW interactions as they are implemented.
+- [ ] **7.2** Verify backend history endpoints and station/date filtering against a running backend; run full backend tests + Ruff when backend code changes.
+- [ ] **7.3** Rerun frontend `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` and relevant route/UI checks at final MVP completion.
+- [ ] **7.4** Perform full desktop/mobile, light/dark, Finnish/English, keyboard/touch and end-to-end checks for homepage, current conditions, daily/weekly charts and table.
+- [ ] **7.5** Review MVP against `frontend/docs/DESIGN_SPEC.md`, record known limitations, update documentation and commit/push only with task-specific authorization.
+
+## 8. Explicitly deferred features
+
+- [ ] **8.1** Park-specific north-oriented aerial image with marked cables, while preserving a replaceable compass backdrop.
+- [ ] **8.2** Rain radar below forecast charts, after confirming a suitable provider and attribution/license.
+- [ ] **8.3** Long-term historical weather analysis and forecast-versus-observation accuracy analytics.
+- [ ] **8.4** Additional wakeparks/station coverage and new weather metrics, as separately approved.
+
+## Recommended implementation sequence
+
+1. Finish **3.6**: water-temperature history line in the daily chart (use existing `selectDailyWater()` carefully; verify line does not continue beyond the last actual reading).
+2. Finish **3.7**: precipitation probability below the chart with explicit no-data handling.
+3. Finish **3.8–3.12**: tooltips, NOW indicator and daily-chart reliability tests.
+4. Finish **2.4b–2.7**: current conditions and wind compass.
+5. Complete **4**: weekly chart.
+6. Complete **5**: detailed hourly data table.
+7. Complete **2.1**: homepage rows with current conditions.
+8. Complete **6–7**: accessibility, attribution, performance, final end-to-end verification and docs.
+
+## Operating protocol
+
+1. Read `AGENTS.md`, `frontend/AGENTS.md`, this checklist and relevant design/API documentation before a frontend implementation task; inspect relevant Next.js local documentation when coding.
+2. Inspect the current local branch and uncommitted changes. Do not overwrite local work. Follow applicable repository Git restrictions; user operations on `main` do not automatically authorize AI-agent writes to `main`.
+3. Implement one numbered task or a tightly connected set of subitems at a time. State planned files and checks, preserve existing architecture and obtain approval for provider/API/schema changes.
+4. Label code instructions **COMPLETE FILE** or **PARTIAL CHANGE**, and specify exact insertion/replacement boundaries.
+5. Run focused tests for code changes. For documentation-only changes, tests are unnecessary unless code is also modified. Never claim tests or browser checks that were not performed.
+6. Keep observations, forecasts and water-temperature samples distinct. Preserve source, station, timestamp, `fetched_at`, nulls, and forecast history. Use park-local dates and DST-aware boundaries.
+7. In routine development status messages, prefer the current top-level checklist section; provide the complete checklist when expressly requested, subject to the repository's active instructions.
+8. Stop after the requested task, report changed files, actual verification and any unresolved items; do not commit/push/merge or migrate a database without authorization specific to that action.
