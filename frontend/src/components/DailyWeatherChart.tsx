@@ -5,6 +5,7 @@ import { useId } from "react";
 import {
   buildLineSeries,
   createChartScale,
+  measuredForecastBridge,
   type ChartBreak,
   type ChartBreakReason,
 } from "@/lib/chart-lines";
@@ -16,12 +17,17 @@ import {
 } from "@/lib/date";
 import { translations, type Locale } from "@/lib/i18n";
 import styles from "./DailyWeatherChart.module.css";
+import {
+  getChartWindowRange,
+  type ChartWindow,
+} from "@/lib/chart-window";
 
 interface DailyWeatherChartProps {
   data: DailyWeatherData;
   selectedDate: string;
   timeZone: string;
   locale: Locale;
+  chartWindow: ChartWindow;
 }
 
 const WIDTH = 900;
@@ -37,6 +43,7 @@ export default function DailyWeatherChart({
   selectedDate,
   timeZone,
   locale,
+  chartWindow,
 }: DailyWeatherChartProps) {
   const clipId = useId();
   const t = translations[locale].dailyForecast;
@@ -49,9 +56,15 @@ export default function DailyWeatherChart({
     ? daily.forecasts.data.forecasts
     : [];
 
-  const startMs = Date.parse(daily.start);
-  const endMs = Date.parse(daily.end);
-  const durationMs = endMs - startMs;
+  const visibleRange = getChartWindowRange(
+    selectedDate,
+    timeZone,
+    chartWindow,
+  );
+
+const startMs = visibleRange.start.getTime();
+const endMs = visibleRange.end.getTime();
+const durationMs = endMs - startMs;
 
   const definitions = [
     { field: "wind_speed", label: t.wind, color: "#216447", axis: "wind" },
@@ -84,6 +97,33 @@ export default function DailyWeatherChart({
     },
   ]);
 
+const transitionLines = definitions.flatMap((definition) => {
+  const lastObserved = observations.at(-1);
+  const firstForecast = forecasts[0];
+
+  const points = measuredForecastBridge(
+    lastObserved
+      ? {
+          timestamp: lastObserved.timestamp,
+          value: lastObserved[definition.field],
+          source: lastObserved.source,
+          intervalMinutes: lastObserved.resolution_minutes,
+        }
+      : undefined,
+    firstForecast
+      ? {
+          timestamp: firstForecast.timestamp,
+          value: firstForecast[definition.field],
+          source: firstForecast.source,
+          intervalMinutes: 60,
+        }
+      : undefined,
+    2 * HOUR_MS,
+  );
+
+  return points ? [{ ...definition, points }] : [];
+});
+
   const windScale = createChartScale(
     series
       .filter((item) => item.axis === "wind")
@@ -91,7 +131,7 @@ export default function DailyWeatherChart({
         (segment) => segment.map((point) => point.value),
       )),
     0,
-    15,
+    20,
   );
 
   const temperatureScale = createChartScale(
@@ -124,11 +164,23 @@ export default function DailyWeatherChart({
     },
   );
 
-  const timeTicks: number[] = [];
-  for (let time = startMs; time < endMs; time += 3 * HOUR_MS) {
-    if (endMs - time >= 1.5 * HOUR_MS) timeTicks.push(time);
+// Vertical gridlines at every hour.
+const hourTicks: number[] = [];
+
+for (let time = startMs; time <= endMs; time += HOUR_MS) {
+  hourTicks.push(time);
+}
+
+// Visible time labels every 3 hours.
+const timeTicks: number[] = [];
+
+for (let time = startMs; time < endMs; time += 3 * HOUR_MS) {
+  if (endMs - time >= 1.5 * HOUR_MS) {
+    timeTicks.push(time);
   }
-  timeTicks.push(endMs);
+}
+
+timeTicks.push(endMs);
 
   const reasonLabels: Record<ChartBreakReason, string> = {
     "missing-value": t.missingValue,
@@ -219,113 +271,165 @@ export default function DailyWeatherChart({
             </clipPath>
           </defs>
 
-          <text x={LEFT} y={17} className={styles.unit}>m/s</text>
-          <text x={RIGHT} y={17} textAnchor="end" className={styles.unit}>
-            °C
-          </text>
+{/* Temperature axis: LEFT */}
+<text x={LEFT} y={17} className={styles.unit}>
+  °C
+</text>
 
-          {timeTicks.map((time) => (
-            <g key={time}>
-              <title>
-                {formatLocalDate(new Date(time), timeZone, locale)}
-                {" · "}
-                {formatLocalTime(new Date(time), timeZone, locale)}
-              </title>
-              <line
-                x1={x(time)} x2={x(time)}
-                y1={TOP} y2={BOTTOM}
-                className={styles.grid}
-              />
-              <text
-                x={x(time)}
-                y={BOTTOM + 25}
-                textAnchor={
-                  time === startMs ? "start" :
-                  time === endMs ? "end" : "middle"
-                }
-                className={styles.tick}
-              >
-                {clock.format(new Date(time))}
-              </text>
-            </g>
-          ))}
+{/* Wind axis: RIGHT */}
+<text
+  x={RIGHT}
+  y={17}
+  textAnchor="end"
+  className={styles.unit}
+>
+  m/s
+</text>
 
-          {windScale.ticks.map((value) => (
-            <g key={`wind-${value}`}>
-              <line
-                x1={LEFT} x2={RIGHT}
-                y1={y(value, "wind")} y2={y(value, "wind")}
-                className={styles.grid}
-              />
-              <text
-                x={LEFT - 12}
-                y={y(value, "wind")}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className={styles.tick}
-              >
-                {value}
-              </text>
-            </g>
-          ))}
+{/* Vertical gridlines every hour */}
+{hourTicks.map((time) => (
+  <line
+    key={`hour-${time}`}
+    x1={x(time)}
+    x2={x(time)}
+    y1={TOP}
+    y2={BOTTOM}
+    className={styles.grid}
+  />
+))}
 
-          {temperatureScale.ticks.map((value) => (
-            <text
-              key={`temperature-${value}`}
-              x={RIGHT + 12}
-              y={y(value, "temperature")}
-              dominantBaseline="middle"
-              className={styles.tick}
+{/* Time labels every 3 hours */}
+{timeTicks.map((time) => (
+  <g key={`time-${time}`}>
+    <title>
+      {`${formatLocalDate(new Date(time), timeZone, locale)} · ${formatLocalTime(new Date(time), timeZone, locale)}`}
+    </title>
+
+    <text
+      x={x(time)}
+      y={BOTTOM + 25}
+      textAnchor={
+        time === startMs ? "start" :
+        time === endMs ? "end" : "middle"
+      }
+      className={styles.tick}
+    >
+      {chartWindow === "24h" && time === endMs
+  ? "24:00"
+  : clock.format(new Date(time))}
+    </text>
+  </g>
+))}
+
+{/* Temperature scale and horizontal gridlines */}
+{temperatureScale.ticks.map((value) => (
+  <g key={`temperature-${value}`}>
+    <line
+      x1={LEFT}
+      x2={RIGHT}
+      y1={y(value, "temperature")}
+      y2={y(value, "temperature")}
+      className={styles.grid}
+    />
+
+    <text
+      x={LEFT - 12}
+      y={y(value, "temperature")}
+      textAnchor="end"
+      dominantBaseline="middle"
+      className={styles.tick}
+    >
+      {value}
+    </text>
+  </g>
+))}
+
+{/* Wind scale: right-hand side */}
+{windScale.ticks.map((value) => (
+  <text
+    key={`wind-${value}`}
+    x={RIGHT + 12}
+    y={y(value, "wind")}
+    dominantBaseline="middle"
+    className={styles.tick}
+  >
+    {value}
+  </text>
+))}
+
+{/* Measurement and forecast lines */}
+<g clipPath={`url(#${clipId})`}>
+  {series.map((item) => (
+    <g key={`${item.field}-${item.kind}`}>
+      {item.segments.map((segment, index) => {
+        const label = `${item.label} — ${
+          item.kind === "measured" ? t.measured : t.forecastStyle
+        }`;
+
+        if (segment.length === 1) {
+          return (
+            <circle
+              key={index}
+              cx={x(segment[0].time)}
+              cy={y(segment[0].value, item.axis)}
+              r={3}
+              stroke={item.color}
+              fill={item.kind === "measured" ? item.color : "white"}
             >
-              {value}
-            </text>
-          ))}
+              <title>{label}</title>
+            </circle>
+          );
+        }
 
-          <g clipPath={`url(#${clipId})`}>
-            {series.map((item) => (
-              <g key={`${item.field}-${item.kind}`}>
-                {item.segments.map((segment, index) => {
-                  const label = `${item.label} — ${
-                    item.kind === "measured" ? t.measured : t.forecastStyle
-                  }`;
+        return (
+          <polyline
+            key={index}
+            points={segment.map((point) =>
+              `${x(point.time)},${y(point.value, item.axis)}`
+            ).join(" ")}
+            fill="none"
+            stroke={item.color}
+            strokeWidth={item.axis === "wind" ? 1 : 2}
+            strokeDasharray={
+              item.kind === "forecast" ? "6 4" : undefined
+            }
+            vectorEffect="non-scaling-stroke"
+          >
+            <title>{label}</title>
+          </polyline>
+        );
+      })}
+    </g>
+  ))}
+</g>
 
-                  if (segment.length === 1) {
-                    return (
-                      <circle
-                        key={index}
-                        cx={x(segment[0].time)}
-                        cy={y(segment[0].value, item.axis)}
-                        r={3}
-                        stroke={item.color}
-                        fill={item.kind === "measured" ? item.color : "white"}
-                      >
-                        <title>{label}</title>
-                      </circle>
-                    );
-                  }
-
-                  return (
-                    <polyline
-                      key={index}
-                      points={segment.map((point) =>
-                        `${x(point.time)},${y(point.value, item.axis)}`
-                      ).join(" ")}
-                      fill="none"
-                      stroke={item.color}
-                      strokeWidth={2}
-                      strokeDasharray={item.kind === "forecast" ? "6 4" : undefined}
-                      vectorEffect="non-scaling-stroke"
-                    >
-                      <title>{label}</title>
-                    </polyline>
-                  );
-                })}
-              </g>
-            ))}
-          </g>
+{/* Dashed transition between measurements and forecasts */}
+{transitionLines.map((item) => (
+  <line
+    key={`transition-${item.field}`}
+    clipPath={`url(#${clipId})`}
+    x1={x(item.points[0].time)}
+    y1={y(item.points[0].value, item.axis)}
+    x2={x(item.points[1].time)}
+    y2={y(item.points[1].value, item.axis)}
+    stroke={item.color}
+    strokeWidth={item.axis === "wind" ? 1 : 2}
+    strokeDasharray="6 4"
+    vectorEffect="non-scaling-stroke"
+  >
+    <title>
+      {`${item.label}: ${t.measured} → ${t.forecastStyle}`}
+    </title>
+  </line>
+))}
 
           {explanations.map(({ gap }, index) => {
-            if (!gap.reasons.includes("source-change") || gap.to === null) {
+            if (
+              !gap.reasons.includes("source-change") ||
+              gap.to === null ||
+              gap.to < startMs ||
+              gap.to > endMs
+            ) {
               return null;
             }
 

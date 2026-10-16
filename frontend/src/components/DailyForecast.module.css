@@ -2,7 +2,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
+  padding-left: 60px;
 }
 
 .dayButton {
@@ -47,7 +48,13 @@
 }
 
 .date {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 17px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .timezone {
@@ -98,4 +105,57 @@
   padding-block: 1rem;
   color: #415b50;
   font-size: 0.875rem;
+}
+
+.chartWindowSwitch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-right: 60px;
+}
+
+.windowButton {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #287757;
+  border-radius: 6px;
+  background: white;
+  color: #18372d;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.windowButton[aria-pressed="true"] {
+  background: #287757;
+  color: white;
+}
+
+.windowButton:hover:not([aria-pressed="true"]) {
+  background: #edf3ef;
+}
+
+@media (max-width: 600px) {
+  .navigation {
+    padding-left: 0;
+    padding-right: 0;
+    gap: 8px;
+  }
+
+  .date {
+    position: static;
+    transform: none;
+    flex: 0 0 100%;
+    margin: 0 0 8px;
+    text-align: left;
+    order: -1;
+  }
+
+  .chartWindowSwitch {
+    margin-left: auto;
+    margin-right: 0;
+    padding-right: 0;
+  }
 }

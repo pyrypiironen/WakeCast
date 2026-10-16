@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import {
   addCalendarDays,
-  formatLocalDate,
   localDayRange,
 } from "@/lib/date";
 import { translations, type Locale } from "@/lib/i18n";
@@ -12,6 +11,10 @@ import DailyWeatherChart from "./DailyWeatherChart";
 import type { DailyWeatherData } from "@/lib/daily-weather";
 import DailyWeatherAvailability from "./DailyWeatherAvailability";
 import styles from "./DailyForecast.module.css";
+import {
+  defaultChartWindow,
+  type ChartWindow,
+} from "@/lib/chart-window";
 
 interface DailyForecastViewProps {
   locale: Locale;
@@ -26,6 +29,9 @@ export default function DailyForecastView({
 }: DailyForecastViewProps) {
   const today = data.today;
   const [selectedDate, setSelectedDate] = useState(today);
+  const [chartWindow, setChartWindow] = useState<ChartWindow>(
+  () => defaultChartWindow(data.requestedAt, timeZone),
+  );
 
   const t = translations[locale].dailyForecast;
   const parkText = translations[locale].parkPage;
@@ -33,6 +39,15 @@ export default function DailyForecastView({
   const { earliestDate, latestDate } = data;
   const isToday = selectedDate === today;
   const { start } = localDayRange(selectedDate, timeZone);
+
+  const displayDate = new Intl.DateTimeFormat(
+  locale === "fi" ? "fi-FI" : "en-GB",
+  {
+    timeZone,
+    day: "numeric",
+    month: "long",
+  },
+).format(start);
 
   function moveDay(offset: number) {
     setSelectedDate((current) => {
@@ -45,10 +60,10 @@ export default function DailyForecastView({
   }
 
   const series = [
-    { key: "wind", label: t.wind, unit: "m/s" },
-    { key: "gust", label: t.gust, unit: "m/s" },
     { key: "air", label: t.air, unit: "°C" },
     { key: "water", label: t.water, unit: "°C" },
+    { key: "wind", label: t.wind, unit: "m/s" },
+    { key: "gust", label: t.gust, unit: "m/s" },
   ] as const;
 
   return (
@@ -56,21 +71,13 @@ export default function DailyForecastView({
       <header className={styles.header}>
         <div>
           <h2 id="daily-forecast">{parkText.daily}</h2>
-          <p
-            className={styles.date}
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {isToday && `${t.today} · `}
-            <time dateTime={selectedDate}>
-              {formatLocalDate(start, timeZone, locale)}
-            </time>
-          </p>
         </div>
         <p className={styles.timezone}>{timeZone}</p>
       </header>
 
       <div className={styles.navigation}>
+
+
         <button
           type="button"
           className={styles.dayButton}
@@ -101,6 +108,47 @@ export default function DailyForecastView({
         >
           <span aria-hidden="true">→</span>
         </button>
+
+        {/* Date in navigation row */}
+      <p
+  className={styles.date}
+  aria-live="polite"
+  aria-atomic="true"
+>
+  {isToday && `${t.today} · `}
+  <time dateTime={selectedDate}>
+    {displayDate}
+  </time>
+</p>
+
+{/* PARTIAL CHANGE — Chart display selector */}
+<div
+  className={styles.chartWindowSwitch}
+  role="group"
+  aria-label={
+    locale === "fi"
+      ? "Kuvaajan aikaväli"
+      : "Chart time range"
+  }
+>
+  <button
+    type="button"
+    className={styles.windowButton}
+    aria-pressed={chartWindow === "12h"}
+    onClick={() => setChartWindow("12h")}
+  >
+    09–21
+  </button>
+
+  <button
+    type="button"
+    className={styles.windowButton}
+    aria-pressed={chartWindow === "24h"}
+    onClick={() => setChartWindow("24h")}
+  >
+    24h
+  </button>
+</div>
       </div>
 
       <ul className={styles.legend} aria-label={t.legend}>
@@ -122,6 +170,7 @@ export default function DailyForecastView({
         selectedDate={selectedDate}
         timeZone={timeZone}
         locale={locale}
+        chartWindow={chartWindow}
       />
 
       <DailyWeatherAvailability

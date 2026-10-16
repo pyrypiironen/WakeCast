@@ -212,3 +212,34 @@ export function createChartScale(
 
   return { min, max, ticks };
 }
+
+export function measuredForecastBridge(
+  observation: ChartPoint | undefined,
+  forecast: ChartPoint | undefined,
+  maxGapMs: number,
+): ChartCoordinate[] | null {
+  if (!observation || !forecast) return null;
+
+  const from = Date.parse(observation.timestamp);
+  const to = Date.parse(forecast.timestamp);
+
+  if (
+    observation.value === null ||
+    forecast.value === null ||
+    !Number.isFinite(observation.value) ||
+    !Number.isFinite(forecast.value) ||
+    !Number.isFinite(from) ||
+    !Number.isFinite(to) ||
+    !Number.isFinite(maxGapMs) ||
+    maxGapMs <= 0 ||
+    to <= from ||
+    to - from > maxGapMs
+  ) {
+    return null;
+  }
+
+  return [
+    { time: from, value: observation.value },
+    { time: to, value: forecast.value },
+  ];
+}

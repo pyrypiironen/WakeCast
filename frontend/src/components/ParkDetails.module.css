@@ -12,7 +12,7 @@
 .action { display: inline-flex; align-items: center; min-height: 44px; padding: .5rem .875rem; border: 1px solid #287757; border-radius: .5rem; font-weight: 550; text-decoration: underline; text-underline-offset: .2em; }
 .action:hover { background: #edf3ef; }
 .weather { display: grid; gap: 1rem; }
-.placeholder p { color: #415b50; font-size: .875rem; }
+.placeholder > p { color: #415b50; font-size: 14px; }
 .cables { display: grid; gap: 1rem; }
 .cables li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1.5rem; padding-block: .75rem; border-bottom: 1px solid #e2e9e5; }
 .cables li:last-child { border-bottom: 0; }

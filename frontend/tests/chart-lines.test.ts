@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   buildLineSeries,
   createChartScale,
+  measuredForecastBridge,
   splitLineSegments,
   type ChartPoint,
 } from "../src/lib/chart-lines";
@@ -80,19 +81,17 @@ test("hourly forecasts connect only across available hourly samples", () => {
   );
 });
 
-test("default scales remain usable when data is missing", () => {
-  assert.deepEqual(createChartScale([null], 0, 15), {
-    min: 0,
-    max: 15,
-    ticks: [0, 5, 10, 15],
-  });
+assert.deepEqual(createChartScale([null], 0, 20), {
+  min: 0,
+  max: 20,
+  ticks: [0, 5, 10, 15, 20],
+});
 
   assert.deepEqual(createChartScale([], 0, 40), {
     min: 0,
     max: 40,
     ticks: [0, 10, 20, 30, 40],
   });
-});
 
 test("scales include strong gusts and negative temperatures", () => {
   const wind = createChartScale([4, 23, null], 0, 15);
@@ -194,4 +193,60 @@ test("invalid timestamps are reported without inventing a position", () => {
       gap.to === null &&
       gap.reasons.includes("invalid-timestamp"),
   ));
+});
+
+test("measurement-to-forecast transition preserves valid gaps", () => {
+  const observation = {
+    timestamp: "2026-10-16T10:50:00Z",
+    value: 5,
+    source: "fmi",
+    intervalMinutes: 10,
+  };
+
+  const forecast = {
+    timestamp: "2026-10-16T11:00:00Z",
+    value: 7,
+    source: "ecmwf",
+    intervalMinutes: 60,
+  };
+
+  const maxGap = 2 * 60 * 60 * 1000;
+
+  assert.deepEqual(
+    measuredForecastBridge(observation, forecast, maxGap),
+    [
+      { time: Date.parse(observation.timestamp), value: 5 },
+      { time: Date.parse(forecast.timestamp), value: 7 },
+    ],
+  );
+
+  // A missing measurement must remain a visible gap.
+  assert.equal(
+    measuredForecastBridge(
+      { ...observation, value: null },
+      forecast,
+      maxGap,
+    ),
+    null,
+  );
+
+  // Do not bridge a long period without measurements.
+  assert.equal(
+    measuredForecastBridge(
+      { ...observation, timestamp: "2026-10-16T06:00:00Z" },
+      forecast,
+      maxGap,
+    ),
+    null,
+  );
+
+  // Do not connect a forecast at or before the measurement.
+  assert.equal(
+    measuredForecastBridge(
+      observation,
+      { ...forecast, timestamp: observation.timestamp },
+      maxGap,
+    ),
+    null,
+  );
 });
