@@ -1,8 +1,8 @@
 
 import { notFound } from "next/navigation";
 
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { getParks } from "@/lib/api";
+import type { Park } from "@/types/park";
 import { isLocale, translations } from "@/lib/i18n";
 
 export default async function Home({
@@ -17,27 +17,29 @@ export default async function Home({
   }
 
   const t = translations[lang];
-  const parks = await getParks();
+  let parks: Park[] | null = null;
+  try {
+    parks = await getParks();
+  } catch {
+    // Keep the shared navigation usable when the backend is unavailable.
+  }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-      <LanguageSwitcher locale={lang} />
-
-      <h1 className="mt-6 text-3xl font-bold">
-        WakeCast
-      </h1>
-
-      <p className="mt-4">
-        {t.availableParks}: {parks.length}
-      </p>
-
-      <ul className="mt-4 space-y-2">
-        {parks.map((park) => (
-          <li key={park.id}>
-            {park.name} — {park.city}
-          </li>
-        ))}
-      </ul>
-    </main>
+    <section aria-labelledby="page-title">
+      <h1 id="page-title">{t.description}</h1>
+      {parks === null ? (
+        <p role="status" className="status-message">{t.parksUnavailable}</p>
+      ) : (
+        <>
+          <p className="mt-4">{t.availableParks}: {parks.length}</p>
+          {parks.length === 0 && <p className="status-message">{t.noParks}</p>}
+          <ul className="mt-4 space-y-2">
+            {parks.map((park) => (
+              <li key={park.id}>{park.name} — {park.city}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { isLocale } from "@/lib/i18n";
+import AppHeader from "@/components/AppHeader";
 
 import "../globals.css";
 
@@ -38,7 +39,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <AppHeader locale={lang} />
+        <main id="main-content" tabIndex={-1} className="content-width page-content">
+          {children}
+        </main>
       </body>
     </html>
   );

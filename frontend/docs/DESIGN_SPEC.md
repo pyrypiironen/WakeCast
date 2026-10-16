@@ -60,6 +60,11 @@ Status: prepared for Work mode; visual details may be refined during implementat
 - Deferred to a later scope; planned location below the forecast charts, not part of initial MVP.
 
 ## API/data constraints known as of repo inspection 2026-10-15
+> Superseded API status: source audit at revision `034196b` confirms both historical
+> routes are now implemented and registered. The notes below describe the earlier
+> handoff state. See `API_CONTRACT.md` for current contracts and remaining live-data
+> verification limits; UI requirements above are unchanged.
+
 - `GET /api/parks`, `/api/parks/{slug}`: park + cables, timezone, coordinates.
 - `GET /api/parks/{slug}/weather`: FUTURE forecasts only; snapshot freshness/coverage metadata; **no public historical-observation route currently**.
 - `GET /api/parks/{slug}/water-temperature`: latest observed value only; not water-temperature history. Proposed new read-only endpoints `/api/parks/{slug}/weather/observations` and `/api/parks/{slug}/water-temperature/history` are PREPARED in a separate patch bundle, NOT yet applied to GitHub.

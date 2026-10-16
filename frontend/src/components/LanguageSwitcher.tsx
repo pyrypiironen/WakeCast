@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import type { Locale } from "@/lib/i18n";
+import { translations, type Locale } from "@/lib/i18n";
 
 interface LanguageSwitcherProps {
   locale: Locale;
@@ -21,7 +21,7 @@ export default function LanguageSwitcher({
   ] as const;
 
   return (
-    <nav aria-label="Language selection" className="flex gap-4">
+    <nav aria-label={translations[locale].languageSelection} className="language-switcher">
       {languages.map((language) => {
         const href = pathname.replace(
           /^\/(en|fi)(?=\/|$)/,
@@ -37,11 +37,7 @@ export default function LanguageSwitcher({
             hrefLang={language.code}
             lang={language.code}
             aria-current={isActive ? "page" : undefined}
-            className={
-              isActive
-                ? "font-semibold underline"
-                : "hover:underline"
-            }
+            className={isActive ? "language-link is-active" : "language-link"}
           >
             {language.label}
           </Link>

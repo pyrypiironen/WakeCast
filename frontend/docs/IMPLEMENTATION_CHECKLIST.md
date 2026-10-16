@@ -13,13 +13,18 @@ This is the source of truth for Work mode. Checkbox status: [x] completed and ve
 - [x] 1.1 Review existing frontend structure and dependencies (Next.js/React/TypeScript/Tailwind).
 - [x] 1.2 Establish frontend architecture, locale routing, and initial API integration (`/en`, `/fi`, typed parks API).
 - [ ] 1.3 Design and implement responsive shared layout and navigation: header/logo, language switcher, content width, homepage/park page skeletons; EN/FI UX; keyboard/mobile checks.
+  - Implemented shared locale layout, header, language navigation, skip link, responsive width/spacing and localized empty/error handling; preserved the existing simple names/count. No park-detail route was added, per the Section 1 task restriction. Production HTTP checks passed for `/en`, `/fi`, `/` redirect and unsupported locale. Visual/keyboard browser checks remain pending: Chromium was unavailable and its download failed in this environment.
 - [ ] 1.4 Inventory live API route payloads/DB relationships, sample forecast horizons, observed station mapping, and data freshness; confirm UI data contract and missing/null semantics before weather implementation.
-- [ ] 1.5 Introduce shared typed weather models/API client methods, formatting utilities (m/s, °C, %, bearing, provenance) and park-timezone date helpers; test DST-sensitive cases.
+  - Source contract/relationship audit completed against `034196b`; both history routes are now implemented and registered. See `API_CONTRACT.md`. Live response samples, actual station configuration, forecast horizon/PoP coverage and freshness remain pending because no live backend is reachable here.
+- [x] 1.5 Introduce shared typed weather models/API client methods, formatting utilities (m/s, °C, %, bearing, provenance) and park-timezone date helpers; test DST-sensitive cases.
+  - Verified: 16 Node tests passed, TypeScript validation, ESLint and production build passed. No new package dependencies; no observation/forecast composition or charts added.
 
 ## 2. Wakepark Pages
 - [ ] 2.1 Compact clickable park-list rows on homepage; desktop single-row conditions and mobile wrap; weather icon, temperature, wind/gust, water. Show loading/error/unavailable states; source/time labels.
-- [ ] 2.2 Localized park detail page route and main hierarchy: park metadata, current conditions, daily graph, weekly graph, detailed table, booking information.
-- [ ] 2.3 Cable details, booking links and website URL with `_fi` fallbacks to English where unavailable; valid external-link semantics.
+- [x] 2.2 Localized park detail page route and main hierarchy: park metadata, current conditions, daily graph, weekly graph, detailed table, booking information.
+- [x] 2.3 Cable details, booking links and website URL with `_fi` fallbacks to English where unavailable; valid external-link semantics.
+  - Verified for 2.2–2.3: localized `/en/parks/[slug]` and `/fi/parks/[slug]`, server-side park metadata, HTTP 404 and localized not-found boundary, unavailable/retry states, slug-preserving language links, Finnish/default website and cable URLs, nullable cable names and empty cables. Current conditions, daily/weekly charts and detailed data are structural placeholders only; no weather requests or aggregation added.
+  - Validation: TypeScript, ESLint, 16 existing unit tests, production build and 11 production-route subtests (12 passing including their parent test). Run `npm run build && npm run test:parks` for route tests with a local mock API. Next 16.4 renders the 404 boundary from Flight data on the client; tests verify HTTP status and serialized localized content. Visual/mobile/keyboard and 404 hydration checks remain manual: Chromium download failed in this environment. Other checklist statuses were intentionally preserved.
 - [ ] 2.4 Current conditions aggregation: latest real observations when available, forecast fallback explicitly labeled, wind direction FROM bearing, air/water weather sources and timestamps.
 - [ ] 2.5 Replaceable compass illustration + dynamic wind arrow; initially generic compass backdrop; support future user-supplied north-oriented aerial image with marked cables, without rewriting arrow logic.
 
