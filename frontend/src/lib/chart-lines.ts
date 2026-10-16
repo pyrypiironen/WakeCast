@@ -35,6 +35,7 @@ export interface ChartLineSeries {
 
 export function buildLineSeries(
   points: readonly ChartPoint[],
+  options: { connectSourceChanges?: boolean } = {},
 ): ChartLineSeries {
   const ordered = points.map((point) => ({
     point,
@@ -116,15 +117,21 @@ export function buildLineSeries(
     }
 
     if (reasons.size > 0) {
-      finishSegment();
-      breaks.push({
-        from: previous?.time ?? null,
-        to: time,
-        fromSource: previous?.point.source ?? null,
-        toSource: point.source,
-        reasons: [...reasons],
-      });
-    }
+  const sourceChangeOnly =
+    reasons.size === 1 && reasons.has("source-change");
+
+  if (!sourceChangeOnly || !options.connectSourceChanges) {
+    finishSegment();
+  }
+
+  breaks.push({
+    from: previous?.time ?? null,
+    to: time,
+    fromSource: previous?.point.source ?? null,
+    toSource: point.source,
+    reasons: [...reasons],
+  });
+}
 
     pending.clear();
 

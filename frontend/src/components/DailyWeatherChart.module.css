@@ -1,13 +1,13 @@
 .sourceMarker {
-  stroke: #72877b;
+  stroke: var(--color-border);
   stroke-width: 1;
   stroke-dasharray: 2 4;
   vector-effect: non-scaling-stroke;
 }
 
 .markerLabel {
-  fill: #18372d;
-  stroke: #f6f8f7;
+  fill: var(--color-text);
+  stroke: var(--color-surface);
   stroke-width: 4px;
   paint-order: stroke;
   font-size: 12px;
@@ -16,7 +16,7 @@
 
 .explanations {
   margin-top: 0.75rem;
-  color: #415b50;
+  color: var(--color-muted);
   font-size: 0.875rem;
 }
 
@@ -56,32 +56,43 @@
 }
 
 .grid {
-  stroke: #dfe7e2;
+  stroke: #b8cfdf;
+  stroke-opacity: 0.5;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .axis {
-  stroke: #72877b;
+  stroke: light-dark(var(--color-border), #ffffff);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .tick {
-  fill: #415b50;
+  fill: var(--color-muted);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 
 .unit {
-  fill: #18372d;
+  fill: var(--color-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .caption {
   margin-top: 0.5rem;
-  color: #415b50;
+  color: var(--color-muted);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.plotBackground {
+  fill: light-dark(#ffffff, #dcebf5);
+}
+
+.cloudUnit {
+  fill: var(--color-text);
+  font-size: 20px;
+  font-weight: 600;
 }

@@ -250,3 +250,42 @@ test("measurement-to-forecast transition preserves valid gaps", () => {
     null,
   );
 });
+
+test("forecast source changes connect without hiding missing data", () => {
+  const continuous = buildLineSeries(
+    [
+      point(0, 4, "fmi_edited", 60),
+      point(60, 5, "ecmwf", 60),
+    ],
+    { connectSourceChanges: true },
+  );
+
+  assert.deepEqual(
+    continuous.segments.map((segment) =>
+      segment.map((item) => item.value)
+    ),
+    [[4, 5]],
+  );
+
+  assert.deepEqual(
+    continuous.breaks[0].reasons,
+    ["source-change"],
+  );
+
+  const missing = buildLineSeries(
+    [
+      point(0, 4, "fmi_edited", 60),
+      point(180, 5, "ecmwf", 60),
+    ],
+    { connectSourceChanges: true },
+  );
+
+  assert.deepEqual(
+    missing.segments.map((segment) => segment.length),
+    [1, 1],
+  );
+
+  assert.ok(
+    missing.breaks[0].reasons.includes("missing-sample"),
+  );
+});

@@ -30,11 +30,12 @@ interface DailyWeatherChartProps {
   chartWindow: ChartWindow;
 }
 
-const WIDTH = 900;
+const WIDTH = 960;
 const HEIGHT = 320;
 const LEFT = 52;
 const RIGHT = 848;
-const TOP = 30;
+const CLOUD_AXIS_X = RIGHT + 72;
+const TOP = 40;
 const BOTTOM = 270;
 const HOUR_MS = 3_600_000;
 
@@ -67,10 +68,10 @@ const endMs = visibleRange.end.getTime();
 const durationMs = endMs - startMs;
 
   const definitions = [
-    { field: "wind_speed", label: t.wind, color: "#216447", axis: "wind" },
-    { field: "wind_gust", label: t.gust, color: "#60956d", axis: "wind" },
-    { field: "temperature", label: t.air, color: "#c46622", axis: "temperature" },
-  ] as const;
+  { field: "wind_speed", label: t.wind, color: "#298A63", axis: "wind" },
+  { field: "wind_gust", label: t.gust, color: "#73AD7E", axis: "wind" },
+  { field: "temperature", label: t.air, color: "#E58A35", axis: "temperature" },
+] as const;
 
   const series = definitions.flatMap((definition) => [
     {
@@ -86,14 +87,15 @@ const durationMs = endMs - startMs;
     {
       ...definition,
       kind: "forecast" as const,
-      ...buildLineSeries(forecasts.map((point) => ({
+      ...buildLineSeries(
+        forecasts.map((point) => ({
         timestamp: point.timestamp,
         value: point[definition.field],
         source: point.source,
-        // The current forecast feed is hourly.
-        // Larger gaps remain separate points/segments.
         intervalMinutes: 60,
-      }))),
+      })),
+    { connectSourceChanges: true },
+  ),
     },
   ]);
 
@@ -271,16 +273,28 @@ timeTicks.push(endMs);
             </clipPath>
           </defs>
 
-{/* Temperature axis: LEFT */}
-<text x={LEFT} y={17} className={styles.unit}>
+          {/* Background inside the plotting area only */}
+<rect
+  x={LEFT}
+  y={TOP}
+  width={RIGHT - LEFT}
+  height={BOTTOM - TOP}
+  className={styles.plotBackground}
+/>
+
+<text
+  x={LEFT - 12}
+  y={17}
+  textAnchor="end"
+  className={styles.unit}
+>
   °C
 </text>
 
-{/* Wind axis: RIGHT */}
 <text
-  x={RIGHT}
+  x={RIGHT + 12}
   y={17}
-  textAnchor="end"
+  textAnchor="start"
   className={styles.unit}
 >
   m/s
@@ -357,6 +371,29 @@ timeTicks.push(endMs);
   </text>
 ))}
 
+{/* Cloudiness scale: far right, 0–100% */}
+<text
+  x={CLOUD_AXIS_X}
+  y={17}
+  textAnchor="middle"
+  className={styles.cloudUnit}
+>
+  ☁
+</text>
+
+{[0, 25, 50, 75, 100].map((value) => (
+  <text
+    key={`cloud-${value}`}
+    x={CLOUD_AXIS_X}
+    y={BOTTOM - (value / 100) * (BOTTOM - TOP)}
+    textAnchor="middle"
+    dominantBaseline="middle"
+    className={styles.tick}
+  >
+    {value}%
+  </text>
+))}
+
 {/* Measurement and forecast lines */}
 <g clipPath={`url(#${clipId})`}>
   {series.map((item) => (
@@ -389,7 +426,7 @@ timeTicks.push(endMs);
             ).join(" ")}
             fill="none"
             stroke={item.color}
-            strokeWidth={item.axis === "wind" ? 1 : 2}
+            strokeWidth={item.axis === "wind" ? 1.5 : 2}
             strokeDasharray={
               item.kind === "forecast" ? "6 4" : undefined
             }
@@ -413,7 +450,7 @@ timeTicks.push(endMs);
     x2={x(item.points[1].time)}
     y2={y(item.points[1].value, item.axis)}
     stroke={item.color}
-    strokeWidth={item.axis === "wind" ? 1 : 2}
+    strokeWidth={item.axis === "wind" ? 1.5 : 2}
     strokeDasharray="6 4"
     vectorEffect="non-scaling-stroke"
   >
