@@ -21,8 +21,10 @@ This is the source of truth for Work mode. Checkbox status: [x] completed and ve
 
 ## 2. Wakepark Pages
 - [ ] 2.1 Compact clickable park-list rows on homepage; desktop single-row conditions and mobile wrap; weather icon, temperature, wind/gust, water. Show loading/error/unavailable states; source/time labels.
-- [ ] 2.2 Localized park detail page route and main hierarchy: park metadata, current conditions, daily graph, weekly graph, detailed table, booking information.
-- [ ] 2.3 Cable details, booking links and website URL with `_fi` fallbacks to English where unavailable; valid external-link semantics.
+- [x] 2.2 Localized park detail page route and main hierarchy: park metadata, current conditions, daily graph, weekly graph, detailed table, booking information.
+- [x] 2.3 Cable details, booking links and website URL with `_fi` fallbacks to English where unavailable; valid external-link semantics.
+  - Verified for 2.2–2.3: localized `/en/parks/[slug]` and `/fi/parks/[slug]`, server-side park metadata, HTTP 404 and localized not-found boundary, unavailable/retry states, slug-preserving language links, Finnish/default website and cable URLs, nullable cable names and empty cables. Current conditions, daily/weekly charts and detailed data are structural placeholders only; no weather requests or aggregation added.
+  - Validation: TypeScript, ESLint, 16 existing unit tests, production build and 11 production-route subtests (12 passing including their parent test). Run `npm run build && npm run test:parks` for route tests with a local mock API. Next 16.4 renders the 404 boundary from Flight data on the client; tests verify HTTP status and serialized localized content. Visual/mobile/keyboard and 404 hydration checks remain manual: Chromium download failed in this environment. Other checklist statuses were intentionally preserved.
 - [ ] 2.4 Current conditions aggregation: latest real observations when available, forecast fallback explicitly labeled, wind direction FROM bearing, air/water weather sources and timestamps.
 - [ ] 2.5 Replaceable compass illustration + dynamic wind arrow; initially generic compass backdrop; support future user-supplied north-oriented aerial image with marked cables, without rewriting arrow logic.
 
