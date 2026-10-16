@@ -88,11 +88,11 @@
 }
 
 .plotBackground {
-  fill: #cfe5f4;
+  fill: var(--color-chart-sky);
 }
 
 .cloudShading {
-  fill: #b7ddf5;
+  fill: var(--color-chart-cloud);
 }
 
 .cloudUnit {

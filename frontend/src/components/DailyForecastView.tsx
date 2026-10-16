@@ -9,7 +9,6 @@ import {
 import { translations, type Locale } from "@/lib/i18n";
 import DailyWeatherChart from "./DailyWeatherChart";
 import type { DailyWeatherData } from "@/lib/daily-weather";
-import DailyWeatherAvailability from "./DailyWeatherAvailability";
 import styles from "./DailyForecast.module.css";
 import {
   defaultChartWindow,
@@ -174,12 +173,6 @@ export default function DailyForecastView({
         chartWindow={chartWindow}
       />
 
-      <DailyWeatherAvailability
-        data={data}
-        selectedDate={selectedDate}
-        timeZone={timeZone}
-        locale={locale}
-      />
     </div>
   );
 }

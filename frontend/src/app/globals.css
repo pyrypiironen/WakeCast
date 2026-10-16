@@ -3,6 +3,10 @@
 :root {
   color-scheme: light dark;
 
+    /* Daily weather chart */
+  --color-chart-sky: #91C9ED;
+  --color-chart-cloud: light-dark(#F5FAFF, #E0F1FC);
+
   --color-page: light-dark(#eef7fc, #101820);
   --color-surface: light-dark(#ffffff, #182630);
   --color-surface-soft: light-dark(#f5fbff, #1c2d39);

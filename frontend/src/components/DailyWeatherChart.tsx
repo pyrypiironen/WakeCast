@@ -6,8 +6,6 @@ import {
   buildLineSeries,
   createChartScale,
   measuredForecastBridge,
-  type ChartBreak,
-  type ChartBreakReason,
 } from "@/lib/chart-lines";
 import { selectDailyAirWeather } from "@/lib/daily-series";
 import type { DailyWeatherData } from "@/lib/daily-weather";
@@ -21,6 +19,9 @@ import {
   getChartWindowRange,
   type ChartWindow,
 } from "@/lib/chart-window";
+import DailyWeatherAvailability, {
+  sourceNames,
+} from "./DailyWeatherAvailability";
 
 interface DailyWeatherChartProps {
   data: DailyWeatherData;
@@ -205,7 +206,7 @@ const transitionLines = definitions.flatMap((definition) => {
 
   function cloudY(value: number): number {
   const percentage = Math.max(0, Math.min(100, value));
-  return TOP + (BOTTOM - TOP) * (percentage / 100);
+  return BOTTOM - (BOTTOM - TOP) * (percentage / 100);
 }
 
   const clock = new Intl.DateTimeFormat(
@@ -235,64 +236,27 @@ for (let time = startMs; time < endMs; time += 3 * HOUR_MS) {
 }
 
 timeTicks.push(endMs);
-
-  const reasonLabels: Record<ChartBreakReason, string> = {
-    "missing-value": t.missingValue,
-    "missing-sample": t.missingSample,
-    "source-change": t.sourceChange,
-    "unknown-interval": t.unknownInterval,
-    "interval-change": t.intervalChange,
-    "duplicate-timestamp": t.duplicateTimestamp,
-    "invalid-timestamp": t.invalidTimestamp,
-  };
-
-  // Combine identical breaks across wind, gust and temperature.
-  const grouped = new Map<string, {
-    gap: ChartBreak;
-    kind: "measured" | "forecast";
-    labels: string[];
-  }>();
-
-  for (const item of series) {
-    for (const gap of item.breaks) {
-      const key = JSON.stringify([
-        item.kind,
-        gap.from,
-        gap.to,
-        gap.fromSource,
-        gap.toSource,
-        [...gap.reasons].sort(),
-      ]);
-
-      const existing = grouped.get(key);
-      if (existing) {
-        if (!existing.labels.includes(item.label)) {
-          existing.labels.push(item.label);
-        }
-      } else {
-        grouped.set(key, {
-          gap,
-          kind: item.kind,
-          labels: [item.label],
-        });
-      }
-    }
-  }
-
-  const explanations = [...grouped.values()];
-
-  function gapTime(gap: ChartBreak): string {
-    if (gap.from === null && gap.to === null) return t.unknownTime;
-
-    const from = gap.from === null
-      ? t.dayStart
-      : formatLocalTime(new Date(gap.from), timeZone, locale);
-    const to = gap.to === null
-      ? t.dayEnd
-      : formatLocalTime(new Date(gap.to), timeZone, locale);
-
-    return `${from} – ${to}`;
-  }
+// Unique source changes within the visible chart window.
+const sourceChanges = Array.from(
+  new Map(
+    series
+      .flatMap((item) => item.breaks)
+      .filter(
+        (gap) =>
+          gap.reasons.includes("source-change") &&
+          gap.to !== null &&
+          gap.to >= startMs &&
+          gap.to <= endMs &&
+          gap.fromSource !== null &&
+          gap.toSource !== null &&
+          gap.fromSource !== gap.toSource,
+      )
+      .map((gap) => [
+        `${gap.to}|${gap.fromSource}|${gap.toSource}`,
+        gap,
+      ] as const),
+  ).values(),
+).sort((a, b) => (a.to ?? 0) - (b.to ?? 0));
 
   return (
     <figure className={styles.figure}>
@@ -393,11 +357,11 @@ timeTicks.push(endMs);
     const last = segment[segment.length - 1];
 
     const points = [
-      `${x(first.time)},${TOP}`,
+      `${x(first.time)},${BOTTOM}`,
       ...segment.map(
         (point) => `${x(point.time)},${cloudY(point.value)}`,
       ),
-      `${x(last.time)},${TOP}`,
+      `${x(last.time)},${BOTTOM}`,
     ].join(" ");
 
     return (
@@ -412,11 +376,11 @@ timeTicks.push(endMs);
   {cloudBridge && (
     <polygon
       points={[
-        `${x(cloudBridge[0].time)},${TOP}`,
+        `${x(cloudBridge[0].time)},${BOTTOM}`,
         ...cloudBridge.map(
           (point) => `${x(point.time)},${cloudY(point.value)}`,
         ),
-        `${x(cloudBridge[1].time)},${TOP}`,
+        `${x(cloudBridge[1].time)},${BOTTOM}`,
       ].join(" ")}
       className={styles.cloudShading}
     />
@@ -601,37 +565,33 @@ timeTicks.push(endMs);
   </line>
 ))}
 
-          {explanations.map(({ gap }, index) => {
-            if (
-              !gap.reasons.includes("source-change") ||
-              gap.to === null ||
-              gap.to < startMs ||
-              gap.to > endMs
-            ) {
-              return null;
-            }
+          {sourceChanges.map((gap, index) => (
+  <g key={`source-${index}`}>
+    <title>
+      {t.sourceChange}:{" "}
+      {sourceNames[locale][gap.fromSource ?? ""] ?? gap.fromSource}
+      {" → "}
+      {sourceNames[locale][gap.toSource ?? ""] ?? gap.toSource}
+    </title>
 
-            return (
-              <g key={`source-${index}`}>
-                <title>
-                  {t.sourceChange}: {gap.fromSource} → {gap.toSource}
-                </title>
-                <line
-                  x1={x(gap.to)} x2={x(gap.to)}
-                  y1={TOP} y2={BOTTOM}
-                  className={styles.sourceMarker}
-                />
-                <text
-                  x={x(gap.to)}
-                  y={TOP + 14}
-                  textAnchor="middle"
-                  className={styles.markerLabel}
-                >
-                  {index + 1}
-                </text>
-              </g>
-            );
-          })}
+    <line
+      x1={x(gap.to!)}
+      x2={x(gap.to!)}
+      y1={TOP}
+      y2={BOTTOM}
+      className={styles.sourceMarker}
+    />
+
+    <text
+      x={x(gap.to!)}
+      y={TOP + 14}
+      textAnchor="middle"
+      className={styles.markerLabel}
+    >
+      {index + 1}
+    </text>
+  </g>
+))}
 
           <path
             d={`M ${LEFT} ${TOP} V ${BOTTOM} H ${RIGHT} V ${TOP}`}
@@ -642,32 +602,25 @@ timeTicks.push(endMs);
       </div>
 
       <figcaption className={styles.caption}>
-        <p>{t.chartDescription}</p>
-        <p>{t.dayLength}: {daily.durationHours} h.</p>
-      </figcaption>
+  <p>{t.chartDescription}</p>
 
-      {explanations.length > 0 && (
-        <details className={styles.explanations}>
-          <summary>{t.breakDetails} ({explanations.length})</summary>
-          <ol>
-            {explanations.map(({ gap, kind, labels }, index) => (
-              <li key={index}>
-                <strong>
-                  {labels.join(", ")} —{" "}
-                  {kind === "measured" ? t.measured : t.forecastStyle}
-                </strong>
-                <div>{gapTime(gap)}</div>
-                <div>
-                  {gap.reasons.map((reason) => reasonLabels[reason]).join("; ")}
-                </div>
-                {gap.reasons.includes("source-change") && (
-                  <div>{gap.fromSource} → {gap.toSource}</div>
-                )}
-              </li>
-            ))}
-          </ol>
-        </details>
-      )}
+  <DailyWeatherAvailability
+    data={data}
+    selectedDate={selectedDate}
+    timeZone={timeZone}
+    locale={locale}
+  />
+
+  {sourceChanges.map((gap, index) => (
+    <p key={`source-explanation-${index}`}>
+      ({index + 1}) {t.sourceChange}:{" "}
+      {sourceNames[locale][gap.fromSource ?? ""] ?? gap.fromSource}
+      {" → "}
+      {sourceNames[locale][gap.toSource ?? ""] ?? gap.toSource}.
+    </p>
+  ))}
+</figcaption>
+
     </figure>
   );
 }

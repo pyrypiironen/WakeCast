@@ -12,6 +12,31 @@ interface DailyWeatherAvailabilityProps {
   locale: Locale;
 }
 
+export const sourceNames: Record<Locale, Record<string, string>> = {
+  en: {
+    fmi: "FMI",
+    fmi_edited: "FMI",
+    ecmwf: "ECMWF",
+    harmonie: "HARMONIE",
+    syke: "SYKE",
+    uiras: "UiRaS",
+  },
+  fi: {
+    fmi: "Ilmatieteen laitos",
+    fmi_edited: "Ilmatieteen laitos",
+    ecmwf: "ECMWF",
+    harmonie: "HARMONIE",
+    syke: "SYKE",
+    uiras: "UiRaS",
+  },
+};
+
+function uniqueSources(sources: string[], locale: Locale): string {
+  return [...new Set(sources.filter(Boolean))]
+    .map((source) => sourceNames[locale][source] ?? source)
+    .join(", ");
+}
+
 export default function DailyWeatherAvailability({
   data,
   selectedDate,
@@ -20,89 +45,78 @@ export default function DailyWeatherAvailability({
 }: DailyWeatherAvailabilityProps) {
   const t = translations[locale].dailyForecast;
   const { start, end } = localDayRange(selectedDate, timeZone);
+
   const startTime = start.getTime();
   const endTime = end.getTime();
-  const isFutureDay = selectedDate > data.today;
 
   function isWithinDay(timestamp: string): boolean {
     const time = parseTimestamp(timestamp).getTime();
     return time >= startTime && time < endTime;
   }
 
-  function describe<T>(
+  function sourceStatus<T>(
     result: WeatherDataResult<T>,
-    hasData: (payload: T) => boolean,
+    getSources: (payload: T) => string[],
   ): string {
-    if (result.status === "unavailable") return t.unavailable;
-    if (result.status === "error") return t.loadError;
-    return hasData(result.data) ? t.available : t.noData;
+    if (result.status === "unavailable") {
+      return t.unavailable;
+    }
+
+    if (result.status === "error") {
+      return t.loadError;
+    }
+
+    const sources = uniqueSources(getSources(result.data), locale);
+    return sources || t.noData;
   }
 
-  const forecastStatus = describe(data.forecasts, (payload) =>
-    payload.forecasts.some((point) => isWithinDay(point.timestamp)),
+  const forecastSource = sourceStatus(
+    data.forecasts,
+    (payload) =>
+      payload.forecasts
+        .filter((point) => isWithinDay(point.timestamp))
+        .map((point) => point.source),
   );
 
-  const observationStatus = isFutureDay
-    ? t.futureObservations
-    : describe(data.observations, (payload) =>
-        payload.observations.some(
-          (point) =>
-            isWithinDay(point.timestamp) &&
-            [
-              point.temperature,
-              point.wind_speed,
-              point.wind_gust,
-              point.wind_direction,
-              point.precipitation,
-              point.cloudiness,
-            ].some((value) => value !== null),
-        ),
-      );
+  const observationSource = sourceStatus(
+    data.observations,
+    (payload) =>
+      payload.observations
+        .filter((point) =>
+          isWithinDay(point.timestamp) &&
+          [
+            point.temperature,
+            point.wind_speed,
+            point.wind_gust,
+            point.wind_direction,
+            point.precipitation,
+            point.cloudiness,
+          ].some((value) => value !== null),
+        )
+        .map((point) => point.source),
+  );
 
-  let waterStatus = isFutureDay
-    ? t.futureObservations
-    : describe(data.water, (payload) =>
-        payload.observations.some((point) =>
-          isWithinDay(point.timestamp),
-        ),
-      );
-
-  if (!isFutureDay && data.water.status === "ok") {
-    const payload = data.water.data;
-    const hasDailyReading = payload.observations.some((point) =>
-      isWithinDay(point.timestamp),
-    );
-
-    const earlierReadings = [
-      ...payload.observations,
-      ...(payload.preceding_observation
-        ? [payload.preceding_observation]
-        : []),
-    ];
-
-    const hasEarlierReading = earlierReadings.some(
-      (point) => parseTimestamp(point.timestamp).getTime() < startTime,
-    );
-
-    if (!hasDailyReading && hasEarlierReading) {
-      waterStatus = t.earlierWater;
-    }
-  }
-
-  const rows = [
-    { label: t.forecasts, status: forecastStatus },
-    { label: t.observations, status: observationStatus },
-    { label: t.waterObservations, status: waterStatus },
-  ];
+  const waterSource = sourceStatus(
+    data.water,
+    (payload) =>
+      payload.observations.some((point) =>
+        isWithinDay(point.timestamp),
+      )
+        ? [payload.source]
+        : [],
+  );
 
   return (
-    <dl className="grid gap-3 text-sm" aria-live="polite">
-      {rows.map(({ label, status }) => (
-        <div key={label}>
-          <dt className="font-semibold">{label}</dt>
-          <dd>{status}</dd>
-        </div>
-      ))}
-    </dl>
+    <p
+      className="text-sm"
+      style={{ color: "var(--color-muted)" }}
+      aria-live="polite"
+    >
+      {t.forecasts}: {forecastSource}
+      {" — "}
+      {t.observations}: {observationSource}
+      {" — "}
+      {t.waterObservations}: {waterSource}
+    </p>
   );
 }
