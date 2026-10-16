@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import DailyForecast from "./DailyForecast";
 import { translations, type Locale } from "@/lib/i18n";
 import type { Park } from "@/types/park";
 import styles from "./ParkDetails.module.css";
@@ -49,12 +50,28 @@ export default function ParkDetails({ park, locale }: { park: Park; locale: Loca
           </ul>
         )}
       </section>
-      {/* Structural slots only: no weather requests, inferred readings or charts. */}
+      {/* Daily weather is connected; other weather sections remain placeholders. */}
       <div className={styles.weather}>
         {weatherSections.map(([id, title]) => (
-          <section key={id} className={styles.placeholder} aria-labelledby={id}>
-            <h2 id={id}>{title}</h2>
-            <p>{t.comingSoon}</p>
+          <section
+            key={id}
+            className={`${styles.placeholder} ${
+              id === "daily-forecast" ? styles.dailyForecast : ""
+            }`}
+            aria-labelledby={id}
+          >
+            {id === "daily-forecast" ? (
+              <DailyForecast
+                slug={park.slug}
+                locale={locale}
+                timeZone={park.timezone}
+              />
+            ) : (
+              <>
+                <h2 id={id}>{title}</h2>
+                <p>{t.comingSoon}</p>
+              </>
+            )}
           </section>
         ))}
       </div>

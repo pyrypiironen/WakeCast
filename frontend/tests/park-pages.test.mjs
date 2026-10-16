@@ -28,8 +28,79 @@ test("production park routes with controlled API responses", { timeout: 60_000 }
   const requests = [];
   const api = createServer((request, response) => {
     requests.push(request.url);
-    const slug = request.url.split("/").at(-1);
+
+    const url = new URL(request.url, "http://mock.test");
+    const match = url.pathname.match(/^\/api\/parks\/([^/]+)(\/.*)?$/);
+
     response.setHeader("Content-Type", "application/json");
+
+    if (!match) {
+      response.writeHead(404).end(JSON.stringify({ detail: "Unknown route" }));
+      return;
+    }
+
+    const slug = decodeURIComponent(match[1]);
+    const endpoint = match[2] ?? "";
+    const timestamp = new Date().toISOString();
+
+    if (endpoint === "/weather") {
+      response.end(JSON.stringify({
+        forecast_location: "Test forecast location",
+        fetched_at: timestamp,
+        coverage_start: timestamp,
+        coverage_end: timestamp,
+        forecasts: [{
+          timestamp,
+          temperature: 12,
+          wind_speed: 4,
+          wind_gust: 7,
+          wind_direction: 180,
+          precipitation: 0,
+          precipitation_probability: null,
+          cloudiness: 50,
+          source: "ecmwf",
+        }],
+      }));
+      return;
+    }
+
+    if (endpoint === "/weather/observations") {
+      response.end(JSON.stringify({
+        station_name: "Test weather station",
+        source: "fmi",
+        source_station_id: 123,
+        timezone: park.timezone,
+        observations: [],
+      }));
+      return;
+    }
+
+    if (endpoint === "/water-temperature/history") {
+      if (slug === "weather-partial") {
+        response.writeHead(503).end(JSON.stringify({
+          detail: "Private upstream detail",
+        }));
+        return;
+      }
+
+      response.end(JSON.stringify({
+        observation_location: "Test water station",
+        source: "uiras",
+        source_station_id: "test-water-station",
+        latitude: 60.17,
+        longitude: 24.85,
+        timezone: park.timezone,
+        observations: [],
+        preceding_observation: null,
+      }));
+      return;
+    }
+
+    if (endpoint !== "") {
+      response.writeHead(404).end(JSON.stringify({ detail: "Unknown route" }));
+      return;
+    }
+
     if (slug === "missing") {
       response.writeHead(404).end(JSON.stringify({ detail: "Park not found" }));
     } else if (slug === "unavailable") {
@@ -40,9 +111,17 @@ test("production park routes with controlled API responses", { timeout: 60_000 }
       request.socket.destroy();
     } else {
       const record = { ...park, slug };
+
       if (slug === "fallback") record.website_url_fi = null;
-      if (slug === "empty") { record.cables = []; record.is_active = false; record.water_type = "lake"; }
-      if (slug === "unnamed") record.cables = [{ ...park.cables[0], name: null }];
+      if (slug === "empty") {
+        record.cables = [];
+        record.is_active = false;
+        record.water_type = "lake";
+      }
+      if (slug === "unnamed") {
+        record.cables = [{ ...park.cables[0], name: null }];
+      }
+
       response.end(JSON.stringify(record));
     }
   });
@@ -114,6 +193,46 @@ test("production park routes with controlled API responses", { timeout: 60_000 }
         }
       });
     }
+    
+    for (const locale of ["en", "fi"]) {
+      await t.test(`${locale}: water failure preserves forecast and empty-history states`, async () => {
+        const { status, html } = await read(locale, "weather-partial");
+        assert.equal(status, 200);
+        assert.match(html, /<h1[^>]*>Test Wakepark<\/h1>/);
+
+        const labels = locale === "fi"
+          ? {
+              forecast: "Ennuste",
+              observations: "Säähavainnot",
+              water: "Veden lämpötilahavainnot",
+              available: "Tietoja saatavilla",
+              empty: "Ei tietoja valitulle päivälle",
+              unavailable: "Tietolähde ei ole saatavilla",
+            }
+          : {
+              forecast: "Forecast",
+              observations: "Weather observations",
+              water: "Water-temperature observations",
+              available: "Data available",
+              empty: "No data for the selected day",
+              unavailable: "Data source unavailable",
+            };
+
+        for (const [label, message] of [
+          [labels.forecast, labels.available],
+          [labels.observations, labels.empty],
+          [labels.water, labels.unavailable],
+        ]) {
+          assert.match(
+            html,
+            new RegExp(`<dt[^>]*>${label}</dt>\\s*<dd[^>]*>${message}</dd>`),
+          );
+        }
+
+        assert.ok(html.includes(`href="https://example.com/${locale}/pro"`));
+        assert.doesNotMatch(html, /Private upstream detail/);
+      });
+    }
 
     await t.test("Finnish website falls back to default URL", async () => {
       const { html } = await read("fi", "fallback");
@@ -134,9 +253,47 @@ test("production park routes with controlled API responses", { timeout: 60_000 }
     await t.test("unsupported locale returns 404", async () => {
       assert.equal((await read("de", "test-park")).status, 404);
     });
-    await t.test("park pages fetch only park metadata, not weather or providers", () => {
-      assert.ok(requests.length > 0);
-      assert.ok(requests.every((path) => /^\/api\/parks\/[^/]+$/.test(path)));
+    await t.test("park page loads metadata and all three weather sources", async () => {
+      const before = requests.length;
+      const { status } = await read("en", "request-check");
+      assert.equal(status, 200);
+
+      const calls = requests.slice(before).map(
+        (path) => new URL(path, "http://mock.test"),
+      );
+
+      assert.deepEqual(
+        calls.map((url) => url.pathname).sort(),
+        [
+          "/api/parks/request-check",
+          "/api/parks/request-check/weather",
+          "/api/parks/request-check/weather/observations",
+          "/api/parks/request-check/water-temperature/history",
+        ].sort(),
+      );
+
+      const histories = calls.filter((url) =>
+        url.searchParams.has("start_time"),
+      );
+      assert.equal(histories.length, 2);
+
+      for (const url of histories) {
+        const start = url.searchParams.get("start_time");
+        const end = url.searchParams.get("end_time");
+
+        assert.match(start, /Z$/);
+        assert.match(end, /Z$/);
+        assert.ok(Date.parse(start) < Date.parse(end));
+      }
+
+      assert.equal(
+        histories[0].searchParams.get("start_time"),
+        histories[1].searchParams.get("start_time"),
+      );
+      assert.equal(
+        histories[0].searchParams.get("end_time"),
+        histories[1].searchParams.get("end_time"),
+      );
     });
   } finally {
     app.kill();

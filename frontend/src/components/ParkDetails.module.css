@@ -16,6 +16,9 @@
 .cables { display: grid; gap: 1rem; }
 .cables li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1.5rem; padding-block: .75rem; border-bottom: 1px solid #e2e9e5; }
 .cables li:last-child { border-bottom: 0; }
+.dailyForecast {
+  grid-column: 1 / -1;
+}
 @media (min-width: 48rem) {
   .weather { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .placeholder:first-child, .placeholder:last-child { grid-column: 1 / -1; }
