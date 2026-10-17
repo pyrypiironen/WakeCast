@@ -30,7 +30,7 @@ export default function DailyWeatherWaterLine({
       : null;
 
   return (
-    <g clipPath={`url(#${clipId})`}>
+    <g clipPath={`url(#${clipId})`} data-weather-layer="water">
       {waterPath && (
         <path
           d={waterPath}

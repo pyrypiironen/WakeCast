@@ -279,3 +279,51 @@ export interface ChartLayerProps {
   chart: PreparedDailyWeatherChart;
   geometry: ChartGeometry;
 }
+
+export const defaultWeatherVisibility = {
+  temperature: true,
+  water: true,
+  cloud: true,
+  wind_speed: true,
+  wind_gust: true,
+  precipitationProbability: true,
+};
+
+export type WeatherVisibility = typeof defaultWeatherVisibility;
+
+/** Availability describes what can actually be drawn in the current window.
+ * It is independent of the user's visibility choices and never changes data.
+ */
+export function chartWeatherAvailability(
+  chart: PreparedDailyWeatherChart,
+): WeatherVisibility {
+  const { startMs, endMs } = chart;
+  const intersects = (points: readonly { time: number }[], area = false) => {
+    if (!points.length || (area && points.length < 2)) return false;
+    const first = points[0].time;
+    const last = points[points.length - 1].time;
+    return area
+      ? first < endMs && last > startMs
+      : first <= endMs && last >= startMs;
+  };
+  const hasLine = (field: "temperature" | "wind_speed" | "wind_gust") =>
+    chart.series.some((item) =>
+      item.field === field && item.segments.some((points) => intersects(points)),
+    ) ||
+    chart.transitionLines.some((item) =>
+      item.field === field && intersects(item.points),
+    );
+
+  return {
+    temperature: hasLine("temperature"),
+    water: intersects(chart.waterPoints),
+    cloud:
+      chart.cloudSeries.some((points) => intersects(points, true)) ||
+      (chart.cloudBridge !== null && intersects(chart.cloudBridge, true)),
+    wind_speed: hasLine("wind_speed"),
+    wind_gust: hasLine("wind_gust"),
+    precipitationProbability: chart.precipitationCells.some(
+      (cell) => !cell.isPast && cell.probability !== null,
+    ),
+  };
+}
