@@ -28,7 +28,7 @@ def test_forecast_refresh_interval():
 
     assert job.func is refresh_all_active_parks
     assert isinstance(job.trigger, IntervalTrigger)
-    assert job.trigger.interval.total_seconds() == 15 * 60
+    assert job.trigger.interval.total_seconds() == 10 * 60
 
 
 def test_observation_refresh_interval():

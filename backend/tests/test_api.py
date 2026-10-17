@@ -721,3 +721,150 @@ def test_manual_forecast_refresh_already_in_progress(client, db, monkeypatch):
     assert response.json() == {
         "detail": "Weather forecast refresh already in progress",
     }
+
+
+@pytest.mark.parametrize(
+    ("ecmwf_age_minutes", "expect_fallback"),
+    [
+        (30, True),
+        (119, True),
+        (121, False),
+    ],
+)
+def test_ecmwf_fallback_age_and_48h_boundary(
+    client,
+    db,
+    ecmwf_age_minutes,
+    expect_fallback,
+):
+    park = ParkDB(
+        name="ECMWF Fallback Test Park",
+        slug="ecmwf-fallback-test-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+    db.add(park)
+    db.flush()
+
+    now = datetime.now(timezone.utc)
+    latest_fetched_at = now - timedelta(minutes=3)
+    old_fetched_at = now - timedelta(minutes=ecmwf_age_minutes)
+
+    def forecast(source, fetched_at, hours, wind_speed):
+        return WeatherForecastDB(
+            park_id=park.id,
+            timestamp=now + timedelta(hours=hours),
+            fetched_at=fetched_at,
+            forecast_location=park.name,
+            temperature=12.0,
+            wind_speed=wind_speed,
+            wind_gust=9.0,
+            wind_direction=180.0,
+            precipitation=0.0,
+            precipitation_probability=None,
+            cloudiness=50.0,
+            source=source,
+        )
+
+    db.add_all(
+        [
+            forecast("ecmwf", old_fetched_at, 47, 7.0),
+            forecast("ecmwf", old_fetched_at, 49, 8.0),
+            forecast("ecmwf", old_fetched_at, 60, 9.0),
+            forecast("ecmwf", old_fetched_at, 72, 10.0),
+            forecast("fmi_edited", latest_fetched_at, 1, 5.0),
+            forecast("fmi_edited", latest_fetched_at, 60, 6.0),
+        ]
+    )
+    db.flush()
+
+    before_count = (
+        db.query(WeatherForecastDB).filter(WeatherForecastDB.park_id == park.id).count()
+    )
+
+    response = client.get("/api/parks/ecmwf-fallback-test-park/weather")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    if expect_fallback:
+        assert [point["wind_speed"] for point in data["forecasts"]] == [
+            5.0,
+            8.0,
+            6.0,
+            10.0,
+        ]
+        assert [point["source"] for point in data["forecasts"]] == [
+            "fmi_edited",
+            "ecmwf",
+            "fmi_edited",
+            "ecmwf",
+        ]
+    else:
+        assert [point["wind_speed"] for point in data["forecasts"]] == [5.0, 6.0]
+
+    assert datetime.fromisoformat(data["fetched_at"]) == latest_fetched_at
+
+    after_count = (
+        db.query(WeatherForecastDB).filter(WeatherForecastDB.park_id == park.id).count()
+    )
+    assert after_count == before_count
+
+
+def test_fresh_ecmwf_disables_historical_fallback(client, db):
+    park = ParkDB(
+        name="ECMWF Recovery Test Park",
+        slug="ecmwf-recovery-test-park",
+        city="Espoo",
+        country="Finland",
+        latitude=60.0,
+        longitude=24.0,
+        water_type="sea",
+        website_url="https://example.com",
+        timezone="Europe/Helsinki",
+        is_active=True,
+    )
+    db.add(park)
+    db.flush()
+
+    now = datetime.now(timezone.utc)
+
+    def forecast(source, age_minutes, hours, wind_speed):
+        return WeatherForecastDB(
+            park_id=park.id,
+            timestamp=now + timedelta(hours=hours),
+            fetched_at=now - timedelta(minutes=age_minutes),
+            forecast_location=park.name,
+            temperature=12.0,
+            wind_speed=wind_speed,
+            wind_gust=9.0,
+            wind_direction=180.0,
+            precipitation=0.0,
+            precipitation_probability=None,
+            cloudiness=50.0,
+            source=source,
+        )
+
+    db.add_all(
+        [
+            forecast("ecmwf", 60, 96, 15.0),
+            forecast("fmi_edited", 3, 1, 5.0),
+            forecast("ecmwf", 3, 72, 8.0),
+        ]
+    )
+    db.flush()
+
+    response = client.get("/api/parks/ecmwf-recovery-test-park/weather")
+
+    assert response.status_code == 200
+
+    points = response.json()["forecasts"]
+
+    assert [point["wind_speed"] for point in points] == [5.0, 8.0]
+    assert [point["source"] for point in points] == ["fmi_edited", "ecmwf"]

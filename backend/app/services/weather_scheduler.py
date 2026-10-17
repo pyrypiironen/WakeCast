@@ -185,7 +185,7 @@ scheduler = BackgroundScheduler(
 scheduler.add_job(
     refresh_all_active_parks,
     trigger="interval",
-    minutes=15,
+    minutes=10,
     id="refresh_weather_forecasts",
     replace_existing=True,
 )

@@ -143,6 +143,41 @@ def get_latest_forecast_snapshot(
     )
 
 
+def get_recent_ecmwf_fallback(
+    db: Session,
+    park_id: int,
+    *,
+    now: datetime,
+) -> list[WeatherForecastDB]:
+    """Return ECMWF points beyond 48h from a snapshot at most 2h old."""
+
+    latest_ecmwf_fetched_at = (
+        db.query(func.max(WeatherForecastDB.fetched_at))
+        .filter(
+            WeatherForecastDB.park_id == park_id,
+            WeatherForecastDB.source == "ecmwf",
+            WeatherForecastDB.fetched_at >= now - timedelta(hours=2),
+            WeatherForecastDB.fetched_at <= now,
+        )
+        .scalar()
+    )
+
+    if latest_ecmwf_fetched_at is None:
+        return []
+
+    return (
+        db.query(WeatherForecastDB)
+        .filter(
+            WeatherForecastDB.park_id == park_id,
+            WeatherForecastDB.source == "ecmwf",
+            WeatherForecastDB.fetched_at == latest_ecmwf_fetched_at,
+            WeatherForecastDB.timestamp > now + timedelta(hours=48),
+        )
+        .order_by(WeatherForecastDB.timestamp)
+        .all()
+    )
+
+
 def is_forecast_snapshot_fresh(
     rows: list[WeatherForecastDB],
     max_age_minutes: int = 30,

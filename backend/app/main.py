@@ -29,6 +29,7 @@ from app.services.weather_refresh_lock import ForecastRefreshInProgress
 from app.services.weather_scheduler import scheduler
 from app.services.weather_storage import (
     get_latest_forecast_snapshot,
+    get_recent_ecmwf_fallback,
     is_forecast_snapshot_fresh,
 )
 
@@ -128,6 +129,16 @@ def get_park_weather(
         )
 
     upcoming_rows = [row for row in rows if row.timestamp >= now]
+
+    # Use historical ECMWF data only when the latest snapshot has no
+    # upcoming ECMWF points. Keep the original database rows unchanged.
+    if not any(row.source == "ecmwf" for row in upcoming_rows):
+        fallback_rows = get_recent_ecmwf_fallback(
+            db=db,
+            park_id=park.id,
+            now=now,
+        )
+        upcoming_rows.extend(fallback_rows)
 
     if not upcoming_rows:
         raise HTTPException(

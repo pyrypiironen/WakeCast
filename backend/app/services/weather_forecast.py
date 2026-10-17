@@ -56,6 +56,7 @@ def get_provider_forecasts(
             logger.warning(
                 "Forecast provider unavailable: %s",
                 source,
+                exc_info=True,
             )
             weather = WeatherResponse(
                 forecast_location="Unknown",
