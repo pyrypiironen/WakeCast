@@ -39,9 +39,7 @@ export default function DailyWeatherWaterLine({
           strokeWidth={1.5}
           vectorEffect="non-scaling-stroke"
         >
-          <title>
-            {t.water} — {t.measured}
-          </title>
+          <title>{`${t.water} — ${t.measured}`}</title>
         </path>
       )}
 

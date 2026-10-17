@@ -13,7 +13,10 @@ export default async function ParkNotFound() {
     <section aria-labelledby="park-not-found-title">
       <h1 id="park-not-found-title">{t.notFoundTitle}</h1>
       <p className="mt-4">{t.notFound}</p>
-      <Link className="mt-4 inline-flex min-h-11 items-center underline" href={`/${locale}`}>
+      <Link
+        className="mt-4 inline-flex min-h-11 items-center underline"
+        href={`/${locale}`}
+      >
         {t.back}
       </Link>
     </section>

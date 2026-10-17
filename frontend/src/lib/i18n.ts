@@ -1,4 +1,3 @@
-
 export const locales = ["en", "fi"] as const;
 
 export type Locale = (typeof locales)[number];
@@ -16,7 +15,8 @@ export const translations = {
     skipToContent: "Skip to content",
     homeLabel: "WakeCast home",
     description: "Wakeboarding weather conditions and forecasts",
-    parksUnavailable: "Wakeparks are currently unavailable. Please try again later.",
+    parksUnavailable:
+      "Wakeparks are currently unavailable. Please try again later.",
     noParks: "No wakeparks available.",
     dailyForecast: {
       today: "Today",
@@ -36,10 +36,13 @@ export const translations = {
       loadError: "Could not load data",
       earlierWater: "Only an earlier measurement is available",
       futureObservations: "Future conditions have not been measured",
-      chartRegion: "Daily weather chart, horizontally scrollable on narrow screens",
-      chartFrameDescription: "Chart frame. Weather lines are not displayed yet.",
+      chartRegion:
+        "Daily weather chart, horizontally scrollable on narrow screens",
+      chartFrameDescription:
+        "Chart frame. Weather lines are not displayed yet.",
       dayLength: "Day length",
-      chartDescription: "Solid lines show observations; dashed lines show forecasts. Breaks indicate missing data or a change of source.",
+      chartDescription:
+        "Solid lines show observations; dashed lines show forecasts. Breaks indicate missing data or a change of source.",
       measured: "Observations",
       forecastStyle: "Forecast",
       breakDetails: "Gap and source-change explanations",
@@ -68,7 +71,8 @@ export const translations = {
       cable: "Cable",
       book: "Book",
       noCables: "No cable information is available for this park.",
-      inactive: "This park is marked inactive. Check the park website for current availability.",
+      inactive:
+        "This park is marked inactive. Check the park website for current availability.",
       current: "Current conditions",
       daily: "Daily forecast",
       weekly: "Weekly forecast",
@@ -87,7 +91,8 @@ export const translations = {
     skipToContent: "Siirry sisältöön",
     homeLabel: "WakeCast – etusivu",
     description: "Wakeboarding-sää ja ennusteet",
-    parksUnavailable: "Wakeparkkeja ei voida juuri nyt hakea. Yritä myöhemmin uudelleen.",
+    parksUnavailable:
+      "Wakeparkkeja ei voida juuri nyt hakea. Yritä myöhemmin uudelleen.",
     noParks: "Ei saatavilla olevia wakeparkkeja.",
     dailyForecast: {
       today: "Tänään",
@@ -107,10 +112,12 @@ export const translations = {
       loadError: "Tietojen lataaminen epäonnistui",
       earlierWater: "Vain aiempi mittaus saatavilla",
       futureObservations: "Tulevia olosuhteita ei ole vielä mitattu",
-      chartRegion: "Päivän sääkuvaaja, kapealla näytöllä vieritettävissä vaakasuunnassa",
+      chartRegion:
+        "Päivän sääkuvaaja, kapealla näytöllä vieritettävissä vaakasuunnassa",
       chartFrameDescription: "Kuvaajan runko. Sääkäyriä ei vielä näytetä.",
       dayLength: "Vuorokauden pituus",
-      chartDescription: "Yhtenäiset viivat ovat havaintoja ja katkoviivat ennusteita. Katkokset osoittavat puuttuvia tietoja tai lähteen vaihtumista.",
+      chartDescription:
+        "Yhtenäiset viivat ovat havaintoja ja katkoviivat ennusteita. Katkokset osoittavat puuttuvia tietoja tai lähteen vaihtumista.",
       measured: "Havainnot",
       forecastStyle: "Ennuste",
       breakDetails: "Katkosten ja lähdevaihdosten selitykset",
@@ -139,14 +146,16 @@ export const translations = {
       cable: "Kaapeli",
       book: "Varaa",
       noCables: "Tämän puiston kaapelitietoja ei ole saatavilla.",
-      inactive: "Puisto on merkitty epäaktiiviseksi. Tarkista ajantasainen saatavuus puiston verkkosivuilta.",
+      inactive:
+        "Puisto on merkitty epäaktiiviseksi. Tarkista ajantasainen saatavuus puiston verkkosivuilta.",
       current: "Nykyiset olosuhteet",
       daily: "Päiväennuste",
       weekly: "Viikkoennuste",
       detailed: "Tarkat säätiedot",
       comingSoon: "Tämä näkymä ei ole vielä käytettävissä.",
       unavailableTitle: "Puiston tiedot eivät ole saatavilla",
-      unavailable: "Puiston tietoja ei voitu juuri nyt ladata. Yritä uudelleen.",
+      unavailable:
+        "Puiston tietoja ei voitu juuri nyt ladata. Yritä uudelleen.",
       retry: "Yritä uudelleen",
       notFoundTitle: "Puistoa ei löytynyt",
       notFound: "Tästä osoitteesta ei löytynyt wakeparkkia.",

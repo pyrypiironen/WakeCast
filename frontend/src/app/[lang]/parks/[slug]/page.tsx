@@ -21,11 +21,20 @@ export default async function ParkPage({
 
     return (
       <section aria-labelledby="park-unavailable-title">
-        <Link className="underline" href={`/${lang}`}>{t.back}</Link>
-        <h1 id="park-unavailable-title" className="mt-6">{t.unavailableTitle}</h1>
-        <p role="status" className="status-message">{t.unavailable}</p>
+        <Link className="underline" href={`/${lang}`}>
+          {t.back}
+        </Link>
+        <h1 id="park-unavailable-title" className="mt-6">
+          {t.unavailableTitle}
+        </h1>
+        <p role="status" className="status-message">
+          {t.unavailable}
+        </p>
         {/* A full reload retries the server request, including on the same URL. */}
-        <a className="mt-4 inline-flex min-h-11 items-center underline" href={`/${lang}/parks/${encodeURIComponent(slug)}`}>
+        <a
+          className="mt-4 inline-flex min-h-11 items-center underline"
+          href={`/${lang}/parks/${encodeURIComponent(slug)}`}
+        >
           {t.retry}
         </a>
       </section>

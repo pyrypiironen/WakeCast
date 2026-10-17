@@ -59,7 +59,8 @@ export interface WaterTemperatureStation {
   longitude: number;
 }
 
-export interface ParkWaterTemperatureResponse extends WaterTemperatureStation, WaterTemperatureHistoryPoint {
+export interface ParkWaterTemperatureResponse
+  extends WaterTemperatureStation, WaterTemperatureHistoryPoint {
   is_stale: boolean;
 }
 

@@ -1,4 +1,3 @@
-
 import { notFound } from "next/navigation";
 
 import { getParks } from "@/lib/api";
@@ -28,14 +27,20 @@ export default async function Home({
     <section aria-labelledby="page-title">
       <h1 id="page-title">{t.description}</h1>
       {parks === null ? (
-        <p role="status" className="status-message">{t.parksUnavailable}</p>
+        <p role="status" className="status-message">
+          {t.parksUnavailable}
+        </p>
       ) : (
         <>
-          <p className="mt-4">{t.availableParks}: {parks.length}</p>
+          <p className="mt-4">
+            {t.availableParks}: {parks.length}
+          </p>
           {parks.length === 0 && <p className="status-message">{t.noParks}</p>}
           <ul className="mt-4 space-y-2">
             {parks.map((park) => (
-              <li key={park.id}>{park.name} — {park.city}</li>
+              <li key={park.id}>
+                {park.name} — {park.city}
+              </li>
             ))}
           </ul>
         </>

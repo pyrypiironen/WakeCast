@@ -1,10 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatTemperature, formatWindSpeed, formatPrecipitation, formatPercentage, formatWindDirection, formatProvenance } from "../src/lib/format";
+import {
+  formatTemperature,
+  formatWindSpeed,
+  formatPrecipitation,
+  formatPercentage,
+  formatWindDirection,
+  formatProvenance,
+} from "../src/lib/format";
 
 test("missing or invalid measurements are never formatted as zero", () => {
-  for (const format of [formatTemperature, formatWindSpeed, formatPrecipitation, formatPercentage, formatWindDirection]) {
-    for (const value of [null, undefined, NaN, Infinity]) assert.equal(format(value), "—");
+  for (const format of [
+    formatTemperature,
+    formatWindSpeed,
+    formatPrecipitation,
+    formatPercentage,
+    formatWindDirection,
+  ]) {
+    for (const value of [null, undefined, NaN, Infinity])
+      assert.equal(format(value), "—");
   }
   assert.equal(formatPercentage(0), "0 %");
   assert.equal(formatPrecipitation(0), "0 mm");
@@ -18,7 +32,8 @@ test("units, negative temperatures and localized decimals", () => {
 });
 
 test("meteorological FROM compass boundaries and normalization", () => {
-  for (const value of [0, 360, 720, -360]) assert.equal(formatWindDirection(value), "N");
+  for (const value of [0, 360, 720, -360])
+    assert.equal(formatWindDirection(value), "N");
   assert.equal(formatWindDirection(22.49), "N");
   assert.equal(formatWindDirection(22.5), "NE");
   assert.equal(formatWindDirection(-90), "W");

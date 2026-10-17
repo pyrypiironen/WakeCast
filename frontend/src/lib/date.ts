@@ -6,17 +6,24 @@ export function parseTimestamp(value: string | Date): Date {
     throw new RangeError("Timestamp must include a timezone offset");
   }
   const result = new Date(value);
-  if (!Number.isFinite(result.getTime())) throw new RangeError("Invalid timestamp");
+  if (!Number.isFinite(result.getTime()))
+    throw new RangeError("Invalid timestamp");
   return result;
 }
 
 function dateFormatter(timeZone: string) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
 function dateKey(formatter: Intl.DateTimeFormat, instant: Date): string {
   const parts = formatter.formatToParts(instant);
-  const part = (type: string) => parts.find((item) => item.type === type)!.value;
+  const part = (type: string) =>
+    parts.find((item) => item.type === type)!.value;
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
@@ -25,9 +32,13 @@ export function localDateKey(value: string | Date, timeZone: string): string {
 }
 
 function calendarDate(value: string): Date {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new RangeError("Expected YYYY-MM-DD");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+    throw new RangeError("Expected YYYY-MM-DD");
   const result = new Date(`${value}T00:00:00Z`);
-  if (!Number.isFinite(result.getTime()) || result.toISOString().slice(0, 10) !== value) {
+  if (
+    !Number.isFinite(result.getTime()) ||
+    result.toISOString().slice(0, 10) !== value
+  ) {
     throw new RangeError("Invalid calendar date");
   }
   return result;
@@ -54,20 +65,39 @@ function firstInstant(date: string, formatter: Intl.DateTimeFormat): Date {
 }
 
 /** [start, end), in UTC. Helsinki DST days have 23 or 25 hours, not always 24. */
-export function localDayRange(date: string, timeZone: string): { start: Date; end: Date } {
+export function localDayRange(
+  date: string,
+  timeZone: string,
+): { start: Date; end: Date } {
   const formatter = dateFormatter(timeZone);
   const start = firstInstant(date, formatter);
-  if (dateKey(formatter, start) !== date) throw new RangeError("Local date does not exist in this timezone");
+  if (dateKey(formatter, start) !== date)
+    throw new RangeError("Local date does not exist in this timezone");
   return { start, end: firstInstant(addCalendarDays(date, 1), formatter) };
 }
 
-export function formatLocalDate(value: string | Date, timeZone: string, locale: Locale = "en"): string {
-  return new Intl.DateTimeFormat(locale === "fi" ? "fi-FI" : "en-GB", { timeZone, dateStyle: "medium" }).format(parseTimestamp(value));
+export function formatLocalDate(
+  value: string | Date,
+  timeZone: string,
+  locale: Locale = "en",
+): string {
+  return new Intl.DateTimeFormat(locale === "fi" ? "fi-FI" : "en-GB", {
+    timeZone,
+    dateStyle: "medium",
+  }).format(parseTimestamp(value));
 }
 
 /** Offset is included to distinguish the repeated local hour on autumn DST days. */
-export function formatLocalTime(value: string | Date, timeZone: string, locale: Locale = "en"): string {
+export function formatLocalTime(
+  value: string | Date,
+  timeZone: string,
+  locale: Locale = "en",
+): string {
   return new Intl.DateTimeFormat(locale === "fi" ? "fi-FI" : "en-GB", {
-    timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "shortOffset",
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "shortOffset",
   }).format(parseTimestamp(value));
 }

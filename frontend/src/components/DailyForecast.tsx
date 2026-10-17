@@ -15,11 +15,5 @@ export default async function DailyForecast({
 }: DailyForecastProps) {
   const data = await loadDailyWeather(slug, timeZone);
 
-  return (
-    <DailyForecastView
-      locale={locale}
-      timeZone={timeZone}
-      data={data}
-    />
-  );
+  return <DailyForecastView locale={locale} timeZone={timeZone} data={data} />;
 }

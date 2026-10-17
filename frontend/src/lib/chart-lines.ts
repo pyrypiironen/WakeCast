@@ -44,9 +44,7 @@ export function buildLineSeries(
 
   // An invalid timestamp has no reliable position on the timeline.
   // Conservatively keep valid samples isolated in that case.
-  const invalidTimestamp = ordered.some(
-    ({ time }) => !Number.isFinite(time),
-  );
+  const invalidTimestamp = ordered.some(({ time }) => !Number.isFinite(time));
 
   const sorted = ordered
     .filter(({ time }) => Number.isFinite(time))
@@ -94,9 +92,7 @@ export function buildLineSeries(
       }
 
       const knownInterval =
-        interval !== null &&
-        Number.isFinite(interval) &&
-        interval > 0;
+        interval !== null && Number.isFinite(interval) && interval > 0;
 
       const knownPreviousInterval =
         previousInterval !== null &&
@@ -117,21 +113,21 @@ export function buildLineSeries(
     }
 
     if (reasons.size > 0) {
-  const sourceChangeOnly =
-    reasons.size === 1 && reasons.has("source-change");
+      const sourceChangeOnly =
+        reasons.size === 1 && reasons.has("source-change");
 
-  if (!sourceChangeOnly || !options.connectSourceChanges) {
-    finishSegment();
-  }
+      if (!sourceChangeOnly || !options.connectSourceChanges) {
+        finishSegment();
+      }
 
-  breaks.push({
-    from: previous?.time ?? null,
-    to: time,
-    fromSource: previous?.point.source ?? null,
-    toSource: point.source,
-    reasons: [...reasons],
-  });
-}
+      breaks.push({
+        from: previous?.time ?? null,
+        to: time,
+        fromSource: previous?.point.source ?? null,
+        toSource: point.source,
+        reasons: [...reasons],
+      });
+    }
 
     pending.clear();
 
@@ -163,7 +159,6 @@ export function splitLineSegments(
 ): ChartCoordinate[][] {
   return buildLineSeries(points).segments;
 }
-
 
 export interface ChartScale {
   min: number;
@@ -203,18 +198,15 @@ export function createChartScale(
   const magnitude = 10 ** Math.floor(Math.log10(rawStep));
   const normalized = rawStep / magnitude;
   const multiplier =
-    normalized <= 1 ? 1 :
-    normalized <= 2 ? 2 :
-    normalized <= 5 ? 5 : 10;
+    normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
   const step = multiplier * magnitude;
 
   const min = Math.floor(lower / step) * step;
   const max = Math.ceil(upper / step) * step;
   const count = Math.round((max - min) / step);
 
-  const ticks = Array.from(
-    { length: count + 1 },
-    (_, index) => Number((min + index * step).toPrecision(12)),
+  const ticks = Array.from({ length: count + 1 }, (_, index) =>
+    Number((min + index * step).toPrecision(12)),
   );
 
   return { min, max, ticks };

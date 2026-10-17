@@ -1,8 +1,5 @@
 import { localDayRange, parseTimestamp } from "@/lib/date";
-import type {
-  DailyWeatherData,
-  WeatherDataResult,
-} from "@/lib/daily-weather";
+import type { DailyWeatherData, WeatherDataResult } from "@/lib/daily-weather";
 import { translations, type Locale } from "@/lib/i18n";
 
 interface DailyWeatherAvailabilityProps {
@@ -70,19 +67,16 @@ export default function DailyWeatherAvailability({
     return sources || t.noData;
   }
 
-  const forecastSource = sourceStatus(
-    data.forecasts,
-    (payload) =>
-      payload.forecasts
-        .filter((point) => isWithinDay(point.timestamp))
-        .map((point) => point.source),
+  const forecastSource = sourceStatus(data.forecasts, (payload) =>
+    payload.forecasts
+      .filter((point) => isWithinDay(point.timestamp))
+      .map((point) => point.source),
   );
 
-  const observationSource = sourceStatus(
-    data.observations,
-    (payload) =>
-      payload.observations
-        .filter((point) =>
+  const observationSource = sourceStatus(data.observations, (payload) =>
+    payload.observations
+      .filter(
+        (point) =>
           isWithinDay(point.timestamp) &&
           [
             point.temperature,
@@ -92,18 +86,14 @@ export default function DailyWeatherAvailability({
             point.precipitation,
             point.cloudiness,
           ].some((value) => value !== null),
-        )
-        .map((point) => point.source),
+      )
+      .map((point) => point.source),
   );
 
-  const waterSource = sourceStatus(
-    data.water,
-    (payload) =>
-      payload.observations.some((point) =>
-        isWithinDay(point.timestamp),
-      )
-        ? [payload.source]
-        : [],
+  const waterSource = sourceStatus(data.water, (payload) =>
+    payload.observations.some((point) => isWithinDay(point.timestamp))
+      ? [payload.source]
+      : [],
   );
 
   return (

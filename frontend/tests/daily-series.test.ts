@@ -92,10 +92,7 @@ test("daily selection preserves nulls, gaps, provenance and original arrays", ()
   assert.equal(result.observations.status, "ok");
   assert.equal(result.forecasts.status, "ok");
 
-  if (
-    result.observations.status !== "ok" ||
-    result.forecasts.status !== "ok"
-  ) {
+  if (result.observations.status !== "ok" || result.forecasts.status !== "ok") {
     assert.fail("Expected successful source results");
   }
 
@@ -142,13 +139,13 @@ test("autumn day includes both repeated hours and the next midnight as a closing
   }
 
   assert.deepEqual(
-  result.observations.data.observations.map((point) => point.timestamp),
-  [
-    "2026-10-25T03:30:00+03:00",
-    "2026-10-25T03:30:00+02:00",
-    "2026-10-26T00:00:00+02:00",
-  ],
-);
+    result.observations.data.observations.map((point) => point.timestamp),
+    [
+      "2026-10-25T03:30:00+03:00",
+      "2026-10-25T03:30:00+02:00",
+      "2026-10-26T00:00:00+02:00",
+    ],
+  );
 });
 
 test("spring day has 23 hours and failed sources remain distinct", () => {
@@ -197,10 +194,7 @@ test("forecast includes next midnight as a closing point, but nothing later", ()
 
   assert.deepEqual(
     result.forecasts.data.forecasts.map((point) => point.timestamp),
-    [
-      "2026-10-16T23:00:00+03:00",
-      "2026-10-17T00:00:00+03:00",
-    ],
+    ["2026-10-16T23:00:00+03:00", "2026-10-17T00:00:00+03:00"],
   );
 });
 
@@ -227,23 +221,17 @@ test("forecast closing midnight uses the winter offset on the autumn DST day", (
 
   assert.deepEqual(
     result.forecasts.data.forecasts.map((point) => point.timestamp),
-    [
-      "2026-10-25T23:00:00+02:00",
-      "2026-10-26T00:00:00+02:00",
-    ],
+    ["2026-10-25T23:00:00+02:00", "2026-10-26T00:00:00+02:00"],
   );
 });
 
 test("observations include next midnight as a closing point", () => {
   const result = selectDailyAirWeather(
-    input(
-      "2026-10-17T00:30:00+03:00",
-      [
-        observation("2026-10-16T23:50:00+03:00"),
-        observation("2026-10-17T00:00:00+03:00"),
-        observation("2026-10-17T00:10:00+03:00"),
-      ],
-    ),
+    input("2026-10-17T00:30:00+03:00", [
+      observation("2026-10-16T23:50:00+03:00"),
+      observation("2026-10-17T00:00:00+03:00"),
+      observation("2026-10-17T00:10:00+03:00"),
+    ]),
     "2026-10-16",
     "Europe/Helsinki",
   );
@@ -255,12 +243,7 @@ test("observations include next midnight as a closing point", () => {
   }
 
   assert.deepEqual(
-    result.observations.data.observations.map(
-      (point) => point.timestamp,
-    ),
-    [
-      "2026-10-16T23:50:00+03:00",
-      "2026-10-17T00:00:00+03:00",
-    ],
+    result.observations.data.observations.map((point) => point.timestamp),
+    ["2026-10-16T23:50:00+03:00", "2026-10-17T00:00:00+03:00"],
   );
 });

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -10,9 +9,7 @@ interface LanguageSwitcherProps {
   locale: Locale;
 }
 
-export default function LanguageSwitcher({
-  locale,
-}: LanguageSwitcherProps) {
+export default function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const pathname = usePathname();
 
   const languages = [
@@ -21,11 +18,14 @@ export default function LanguageSwitcher({
   ] as const;
 
   return (
-    <nav aria-label={translations[locale].languageSelection} className="language-switcher">
+    <nav
+      aria-label={translations[locale].languageSelection}
+      className="language-switcher"
+    >
       {languages.map((language) => {
         const href = pathname.replace(
           /^\/(en|fi)(?=\/|$)/,
-          `/${language.code}`
+          `/${language.code}`,
         );
 
         const isActive = locale === language.code;

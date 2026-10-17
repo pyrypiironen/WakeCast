@@ -236,10 +236,9 @@ export default function DailyWeatherChartSvg({
       {sourceChanges.map((gap, index) => (
         <g key={`source-${index}`}>
           <title>
-            {t.sourceChange}:{" "}
-            {sourceNames[locale][gap.fromSource ?? ""] ?? gap.fromSource}
-            {" → "}
-            {sourceNames[locale][gap.toSource ?? ""] ?? gap.toSource}
+            {`${t.sourceChange}: ${
+              sourceNames[locale][gap.fromSource ?? ""] ?? gap.fromSource
+            } → ${sourceNames[locale][gap.toSource ?? ""] ?? gap.toSource}`}
           </title>
 
           <line

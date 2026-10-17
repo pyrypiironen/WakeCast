@@ -17,10 +17,7 @@ test("history bounds use park-local midnight across autumn DST", async (t) => {
       url.searchParams.get("start_time"),
       "2026-10-23T21:00:00.000Z",
     );
-    assert.equal(
-      url.searchParams.get("end_time"),
-      "2026-10-27T10:00:00.000Z",
-    );
+    assert.equal(url.searchParams.get("end_time"), "2026-10-27T10:00:00.000Z");
 
     return new Response(null, { status: 404 });
   });
