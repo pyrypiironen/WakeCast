@@ -152,9 +152,7 @@ const minutesOld = Number.isFinite(timestampMs)
 const freshnessLabel =
   minutesOld === null
     ? t.updateUnavailable
-    : minutesOld === 0
-      ? t.updatedJustNow
-      : `${t.updated} ${minutesOld} ${t.minutesAgo}`;
+    : `${t.updated} ${minutesOld} ${t.minutesAgo}`;
   const parkText = translations[locale].parkPage;
 
   const { earliestDate, latestDate } = liveData;
@@ -264,7 +262,7 @@ const freshnessLabel =
 
         {/* Date in navigation row */}
         <p className={styles.date} aria-live="polite" aria-atomic="true">
-          {isToday && `${t.today} · `}
+          {isToday && `${t.today} — `}
           <time dateTime={selectedDate}>{displayDate}</time>
         </p>
 

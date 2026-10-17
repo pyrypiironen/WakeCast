@@ -36,8 +36,6 @@ export default function DailyWeatherChart(props: DailyWeatherChartProps) {
         />
       </div>
       <figcaption className={styles.caption}>
-        <p>{t.chartDescription}</p>
-        <p>{t.probabilityNote}</p>
 
         <DailyWeatherAvailability
           data={data}
