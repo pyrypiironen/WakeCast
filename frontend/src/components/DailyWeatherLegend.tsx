@@ -44,16 +44,14 @@ export default function DailyWeatherLegend({
                 data-available={availability[key]}
                 onClick={() => onToggle(key)}
               >
-                <span className={styles.indicator} aria-hidden="true">
-                  {visibility[key] ? (availability[key] ? "✓" : "–") : ""}
-                </span>
+                                <span className={styles.indicator} aria-hidden="true" />
                 <span>
-                  {t[label]} ({unit})
-                  {(!visibility[key] || !availability[key]) && (
-                    <span className={styles.status}>
-                      {!visibility[key] ? t.hidden : t.noDataInView}
+                  <span className={styles.labelAndSymbol}>
+                    <span>{t[label]} ({unit})</span>
+                    <span className={styles.symbol} aria-hidden="true">
+                      {key === "precipitationProbability" ? "%" : null}
                     </span>
-                  )}
+                  </span>
                 </span>
               </button>
             </li>

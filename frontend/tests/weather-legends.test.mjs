@@ -102,7 +102,6 @@ for (const [index, key] of keys.entries()) {
     const otherLayers = new Map(keys.filter(item => item !== key).map(item => [item, [...layer(item)].map(node => node.outerHTML)]));
     await click(index);
     assert.equal(buttons()[index].getAttribute("aria-pressed"), "false");
-    assert.match(buttons()[index].textContent, /Hidden/);
     assert.equal(layer(key).length, 0);
     for (const [other, markup] of otherLayers) assert.deepEqual([...layer(other)].map(node => node.outerHTML), markup);
     if (["temperature", "wind_speed", "wind_gust"].includes(key)) {
@@ -144,11 +143,9 @@ test("unavailable/empty/null sources stay distinct from intentionally hidden var
     assert.ok(buttons().every(button => button.dataset.available === "false"));
     for (const button of buttons()) assert.equal(button.getAttribute("aria-description"), translations[locale].dailyForecast.noDataInView);
     await click(0);
-    assert.ok(buttons()[0].textContent.includes(translations[locale].dailyForecast.hidden));
     assert.equal(buttons()[0].getAttribute("aria-pressed"), "false");
     await click(0);
     assert.equal(buttons()[0].getAttribute("aria-pressed"), "true");
-    assert.ok(buttons()[0].textContent.includes(translations[locale].dailyForecast.noDataInView));
     assert.equal(document.querySelectorAll('polyline, [data-weather-layer="water"] circle').length, 0);
   }
 });

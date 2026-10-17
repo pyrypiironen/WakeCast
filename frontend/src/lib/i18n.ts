@@ -66,7 +66,7 @@ export const translations = {
       refreshForecast: "Refresh forecast",
       refreshingForecast: "Refreshing forecast",
       refreshFailed: "Refresh failed. Showing previously loaded data.",
-      precipitationProbability: "Precipitation probability",
+      precipitationProbability: "Rain probability",
       probabilityUnavailable: "Probability unavailable",
       probabilityNote:
   "Precipitation probability is forecast-only. – means unavailable, not 0%.",

@@ -40,12 +40,17 @@ export function buildPrecipitationProbabilityCells(
   // No FMI forecast means no precipitation-probability row.
   if (fmiTimes.length === 0) return [];
 
-  // Stop at the first ECMWF hour. If ECMWF is unavailable,
-  // stop after the final FMI forecast hour instead.
+  // Ignore ECMWF hours before FMI coverage begins.
+  // Stop when the forecast switches from FMI to ECMWF.
+  const firstFmiTime = Math.min(...fmiTimes);
+  const laterEcmwfTimes = ecmwfTimes.filter(
+    (time) => time > firstFmiTime,
+  );
+
   const probabilityEndMs = Math.min(
     endMs,
-    ecmwfTimes.length > 0
-      ? Math.min(...ecmwfTimes)
+    laterEcmwfTimes.length > 0
+      ? Math.min(...laterEcmwfTimes)
       : Math.max(...fmiTimes) + HOUR_MS,
   );
 
