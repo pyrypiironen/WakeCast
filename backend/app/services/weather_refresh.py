@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -48,7 +48,7 @@ def refresh_observations(
     now: datetime | None = None,
 ) -> int:
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     station_id = station.id
     source_station_id = station.source_station_id

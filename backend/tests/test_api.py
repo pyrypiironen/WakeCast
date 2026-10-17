@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -89,8 +89,8 @@ def test_get_park_weather_from_database(client, db):
 
     forecast = WeatherForecastDB(
         park_id=park.id,
-        timestamp=datetime.now(timezone.utc) + timedelta(hours=1),
-        fetched_at=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC) + timedelta(hours=1),
+        fetched_at=datetime.now(UTC),
         forecast_location="Weather API Test Park",
         temperature=15.0,
         wind_speed=5.0,
@@ -160,8 +160,8 @@ def test_get_park_weather_stale_forecast(client, db):
 
     forecast = WeatherForecastDB(
         park_id=park.id,
-        timestamp=datetime.now(timezone.utc) + timedelta(hours=1),
-        fetched_at=datetime.now(timezone.utc) - timedelta(hours=2),
+        timestamp=datetime.now(UTC) + timedelta(hours=1),
+        fetched_at=datetime.now(UTC) - timedelta(hours=2),
         forecast_location="Stale Weather Test Park",
         temperature=15.0,
         wind_speed=5.0,
@@ -370,7 +370,7 @@ def test_refresh_archives_both_providers_and_api_merges(client, db, monkeypatch)
     db.flush()
     park_id = park.id
 
-    timestamp = datetime.now(timezone.utc) + timedelta(hours=1)
+    timestamp = datetime.now(UTC) + timedelta(hours=1)
 
     def point(source, valid_time, wind_speed):
         return WeatherForecast(
@@ -490,7 +490,7 @@ def test_forecast_coverage_and_metadata(
     db.add(park)
     db.flush()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     fetched_at = now - timedelta(minutes=age_minutes)
 
     db.add_all(
@@ -573,7 +573,7 @@ def test_provider_failure_refresh_storage_and_api(
     db.flush()
     park_id = park.id
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     timestamp = now + timedelta(hours=1)
     previous_fetched_at = now - timedelta(minutes=5)
 
@@ -752,7 +752,7 @@ def test_ecmwf_fallback_age_and_48h_boundary(
     db.add(park)
     db.flush()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     latest_fetched_at = now - timedelta(minutes=3)
     old_fetched_at = now - timedelta(minutes=ecmwf_age_minutes)
 
@@ -833,7 +833,7 @@ def test_fresh_ecmwf_disables_historical_fallback(client, db):
     db.add(park)
     db.flush()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     def forecast(source, age_minutes, hours, wind_speed):
         return WeatherForecastDB(

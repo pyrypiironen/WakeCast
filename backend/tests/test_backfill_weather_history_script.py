@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -60,14 +60,14 @@ def test_backfill_reports_chunk_results(
     assert first_call.kwargs == {
         "db": db,
         "station": station,
-        "start_time": datetime(2026, 1, 1, tzinfo=timezone.utc),
-        "end_time": datetime(2026, 1, 16, 23, 59, 59, tzinfo=timezone.utc),
+        "start_time": datetime(2026, 1, 1, tzinfo=UTC),
+        "end_time": datetime(2026, 1, 16, 23, 59, 59, tzinfo=UTC),
     }
     assert second_call.kwargs == {
         "db": db,
         "station": station,
-        "start_time": datetime(2026, 1, 17, tzinfo=timezone.utc),
-        "end_time": datetime(2026, 1, 31, 23, 59, 59, tzinfo=timezone.utc),
+        "start_time": datetime(2026, 1, 17, tzinfo=UTC),
+        "end_time": datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC),
     }
 
     assert (

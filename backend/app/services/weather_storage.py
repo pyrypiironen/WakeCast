@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -13,7 +13,7 @@ def save_forecast_snapshot(
     park_id: int,
     provider_forecasts: tuple[WeatherResponse, ...],
 ) -> int:
-    fetched_at = datetime.now(timezone.utc)
+    fetched_at = datetime.now(UTC)
 
     rows = [
         WeatherForecastDB(
@@ -49,7 +49,7 @@ def save_observations(
     *,
     commit: bool = True,
 ) -> int:
-    fetched_at = datetime.now(timezone.utc)
+    fetched_at = datetime.now(UTC)
 
     rows = [
         {
@@ -188,7 +188,7 @@ def is_forecast_snapshot_fresh(
         return False
 
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     age = now - rows[0].fetched_at
 
@@ -200,7 +200,7 @@ def cleanup_old_forecast_snapshots(
     park_id: int,
     full_history_days: int = 7,
 ) -> int:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=full_history_days)
+    cutoff = datetime.now(UTC) - timedelta(days=full_history_days)
 
     hourly_snapshots = (
         db.query(func.min(WeatherForecastDB.fetched_at).label("keep_fetched_at"))
@@ -241,7 +241,7 @@ def cleanup_old_observations(
     weather_station_id: int,
     native_history_days: int = 183,
 ) -> int:
-    cutoff = datetime.now(timezone.utc) - timedelta(
+    cutoff = datetime.now(UTC) - timedelta(
         days=native_history_days,
     )
 

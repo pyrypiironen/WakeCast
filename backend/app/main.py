@@ -1,6 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     scheduler.start(paused=True)
 
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for job_id in (
             "refresh_weather_forecasts",
@@ -120,7 +120,7 @@ def get_park_weather(
             detail="Weather forecast not found",
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if not is_forecast_snapshot_fresh(rows, now=now):
         raise HTTPException(
@@ -128,7 +128,10 @@ def get_park_weather(
             detail="Weather forecast is stale",
         )
 
-    upcoming_rows = [row for row in rows if row.timestamp >= now]
+    # Include the hour currently in progress.
+    current_hour_start = now.replace(minute=0, second=0, microsecond=0)
+
+    upcoming_rows = [row for row in rows if row.timestamp >= current_hour_start]
 
     # Use historical ECMWF data only when the latest snapshot has no
     # upcoming ECMWF points. Keep the original database rows unchanged.
@@ -278,7 +281,7 @@ def get_park_water_temperature(
             detail="Water temperature observation not found",
         )
 
-    age = datetime.now(timezone.utc) - latest.timestamp
+    age = datetime.now(UTC) - latest.timestamp
 
     return ParkWaterTemperatureResponse(
         source=station.source,

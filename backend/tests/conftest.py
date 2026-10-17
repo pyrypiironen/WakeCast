@@ -8,16 +8,6 @@ from sqlalchemy.orm import Session
 from app.database import Base
 
 # Register all SQLAlchemy models with Base.metadata.
-from app.models.park_db import CableDB, ParkDB
-from app.models.water_temperature_db import (
-    WaterTemperatureObservationDB,
-    WaterTemperatureStationDB,
-)
-from app.models.weather_db import (
-    WeatherForecastDB,
-    WeatherObservationDB,
-    WeatherStationDB,
-)
 
 
 @pytest.fixture

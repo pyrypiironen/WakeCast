@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -10,7 +10,7 @@ from app.services.weather_errors import WeatherProviderError
 
 @pytest.fixture
 def provider_responses():
-    timestamp = datetime(2026, 10, 14, 12, tzinfo=timezone.utc)
+    timestamp = datetime(2026, 10, 14, 12, tzinfo=UTC)
 
     def point(source, valid_time, wind_speed):
         return WeatherForecast(

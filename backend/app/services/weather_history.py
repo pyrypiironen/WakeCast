@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -76,7 +76,7 @@ def backfill_observations(
         db.commit()
         return saved
 
-    recent_cutoff = datetime.now(timezone.utc) - timedelta(days=RECENT_HISTORY_DAYS)
+    recent_cutoff = datetime.now(UTC) - timedelta(days=RECENT_HISTORY_DAYS)
 
     old_observations = [
         observation

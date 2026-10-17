@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -29,7 +29,7 @@ def test_backfill_chunk_commits_atomically(
     station_id = station.id
     db.commit()
 
-    old_time = (datetime.now(timezone.utc) - timedelta(days=184)).replace(
+    old_time = (datetime.now(UTC) - timedelta(days=184)).replace(
         minute=0, second=0, microsecond=0
     )
     recent_time = old_time + timedelta(days=2)

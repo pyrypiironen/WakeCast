@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -71,7 +71,7 @@ def add_observation(db, station, timestamp, temperature=11.06):
     observation = WaterTemperatureObservationDB(
         water_temperature_station_id=station.id,
         timestamp=timestamp,
-        fetched_at=datetime.now(timezone.utc),
+        fetched_at=datetime.now(UTC),
         water_temperature=temperature,
     )
     db.add(observation)
@@ -82,7 +82,7 @@ def add_observation(db, station, timestamp, temperature=11.06):
 
 def test_water_temperature_response(client, db, park, station):
     park.water_temperature_station = station
-    measured_at = datetime.now(timezone.utc) - timedelta(minutes=20)
+    measured_at = datetime.now(UTC) - timedelta(minutes=20)
     observation = add_observation(db, station, measured_at)
 
     response = client.get(URL)
@@ -153,7 +153,7 @@ def test_old_measurement_is_stale_despite_recent_fetch(
     add_observation(
         db,
         station,
-        datetime.now(timezone.utc) - timedelta(hours=3),
+        datetime.now(UTC) - timedelta(hours=3),
     )
 
     response = client.get(URL)
@@ -165,7 +165,7 @@ def test_old_measurement_is_stale_despite_recent_fetch(
 
 def test_returns_latest_measurement(client, db, park, station):
     park.water_temperature_station = station
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     add_observation(db, station, now, temperature=12.0)
     add_observation(
@@ -200,7 +200,7 @@ def test_does_not_return_another_stations_measurement(
 
     park.water_temperature_station = station
     db.flush()
-    add_observation(db, other_station, datetime.now(timezone.utc))
+    add_observation(db, other_station, datetime.now(UTC))
 
     response = client.get(URL)
 

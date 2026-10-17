@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, field_validator
@@ -13,7 +13,7 @@ class WaterTemperatureObservation(BaseModel):
     @field_validator("timestamp")
     @classmethod
     def reject_future_timestamp(cls, value: datetime) -> datetime:
-        latest_allowed = datetime.now(timezone.utc) + MAX_WATER_TEMPERATURE_CLOCK_SKEW
+        latest_allowed = datetime.now(UTC) + MAX_WATER_TEMPERATURE_CLOCK_SKEW
 
         if value > latest_allowed:
             raise ValueError("Water temperature timestamp is too far in the future")

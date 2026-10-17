@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -10,7 +10,7 @@ from app.models.weather import (
 )
 from app.services import weather_refresh
 
-NOW = datetime(2026, 10, 14, 12, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 14, 12, tzinfo=UTC)
 
 
 @pytest.mark.parametrize(

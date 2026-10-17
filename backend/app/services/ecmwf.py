@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
@@ -116,9 +116,7 @@ def parse_ecmwf_forecast(
             values[wakecast_name] = float(field_values[index])
 
         else:
-            timestamp = datetime.fromisoformat(timestamp_text).replace(
-                tzinfo=timezone.utc
-            )
+            timestamp = datetime.fromisoformat(timestamp_text).replace(tzinfo=UTC)
 
             forecasts.append(
                 WeatherForecast(

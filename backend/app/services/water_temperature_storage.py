@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -24,7 +24,7 @@ def save_water_temperature_observations(
     ):
         raise ValueError("Water temperature response does not match the station")
 
-    fetched_at = datetime.now(timezone.utc)
+    fetched_at = datetime.now(UTC)
 
     rows = [
         {
@@ -60,7 +60,7 @@ def get_latest_water_temperature_observation(
     db: Session,
     station_id: int,
 ) -> WaterTemperatureObservationDB | None:
-    latest_allowed = datetime.now(timezone.utc) + MAX_WATER_TEMPERATURE_CLOCK_SKEW
+    latest_allowed = datetime.now(UTC) + MAX_WATER_TEMPERATURE_CLOCK_SKEW
 
     return (
         db.query(WaterTemperatureObservationDB)

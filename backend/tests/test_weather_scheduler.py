@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -46,10 +46,10 @@ def test_observation_cleanup_schedule():
     assert isinstance(job.trigger, CronTrigger)
 
     # Check the next scheduled run from a known UTC timestamp.
-    now = datetime(2026, 10, 10, 4, tzinfo=timezone.utc)
+    now = datetime(2026, 10, 10, 4, tzinfo=UTC)
     next_run = job.trigger.get_next_fire_time(None, now)
 
-    assert next_run == datetime(2026, 10, 11, 3, tzinfo=timezone.utc)
+    assert next_run == datetime(2026, 10, 11, 3, tzinfo=UTC)
 
 
 def test_water_temperature_refresh_interval():

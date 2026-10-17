@@ -65,6 +65,10 @@ export const translations = {
       refreshForecast: "Refresh forecast",
       refreshingForecast: "Refreshing forecast",
       refreshFailed: "Refresh failed. Showing previously loaded data.",
+      precipitationProbability: "Precipitation probability",
+      probabilityUnavailable: "Probability unavailable",
+      probabilityNote:
+  "Precipitation probability is forecast-only. – means unavailable, not 0%.",
     },
     parkPage: {
       back: "Back to wakeparks",
@@ -147,6 +151,9 @@ export const translations = {
       refreshForecast: "Päivitä sääennuste",
       refreshingForecast: "Päivitetään sääennustetta",
       refreshFailed: "Päivitys epäonnistui. Näytetään aiemmin ladatut tiedot.",
+      precipitationProbability: "Sateen todennäköisyys",
+      probabilityUnavailable: "Todennäköisyystietoa ei saatavilla",
+      probabilityNote: "Sateen todennäköisyys on vain ennuste. – tarkoittaa puuttuvaa tietoa, ei 0 %.",
     },
     parkPage: {
       back: "Takaisin wakeparkkeihin",

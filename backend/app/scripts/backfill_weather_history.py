@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.database import SessionLocal
 from app.models.weather_db import WeatherStationDB
@@ -38,7 +38,7 @@ def main() -> int:
                 year,
                 START_MONTH,
                 1,
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
 
             if END_MONTH == 12:
@@ -46,14 +46,14 @@ def main() -> int:
                     year + 1,
                     1,
                     1,
-                    tzinfo=timezone.utc,
+                    tzinfo=UTC,
                 )
             else:
                 season_end = datetime(
                     year,
                     END_MONTH + 1,
                     1,
-                    tzinfo=timezone.utc,
+                    tzinfo=UTC,
                 )
 
             current = season_start

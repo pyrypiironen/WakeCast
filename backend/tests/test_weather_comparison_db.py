@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -12,7 +12,7 @@ from app.services.weather_comparison import get_forecast_observation_pairs
 
 
 def test_forecast_observation_matching(db):
-    valid_time = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    valid_time = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
     station = WeatherStationDB(
         name="Test Station",
@@ -100,7 +100,7 @@ def test_forecast_observation_matching(db):
     ],
 )
 def test_forecast_observation_invalid_matches(db, scenario):
-    valid_time = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    valid_time = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
     station = WeatherStationDB(
         name="Reference Station",
@@ -190,7 +190,7 @@ def test_forecast_observation_invalid_matches(db, scenario):
 
 
 def test_comparison_park_not_found(db):
-    start_time = datetime(2026, 10, 7, tzinfo=timezone.utc)
+    start_time = datetime(2026, 10, 7, tzinfo=UTC)
     end_time = start_time + timedelta(days=1)
 
     with pytest.raises(ValueError, match="not found"):
@@ -220,7 +220,7 @@ def test_comparison_park_without_reference_station(db):
     db.add(park)
     db.flush()
 
-    start_time = datetime(2026, 10, 7, tzinfo=timezone.utc)
+    start_time = datetime(2026, 10, 7, tzinfo=UTC)
     end_time = start_time + timedelta(days=1)
 
     with pytest.raises(

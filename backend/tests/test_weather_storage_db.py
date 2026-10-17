@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -31,7 +31,7 @@ def test_save_observations_upsert(db):
     db.add(station)
     db.flush()
 
-    timestamp = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    timestamp = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
     first_response = WeatherObservationResponse(
         observation_station_id=station.id,
@@ -82,7 +82,7 @@ def test_save_observations_upsert(db):
 
 
 def test_cleanup_old_observations(db):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     old_hour = (now - timedelta(days=200)).replace(minute=0, second=0, microsecond=0)
     recent_hour = (now - timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
 
@@ -149,7 +149,7 @@ def test_cleanup_old_observations(db):
 
 
 def test_cleanup_old_forecast_snapshots(db):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     old_hour = (now - timedelta(days=10)).replace(minute=0, second=0, microsecond=0)
     recent_time = now - timedelta(days=1)
 
@@ -258,7 +258,7 @@ def test_observation_upsert_keeps_stations_separate(db):
     db.add_all(stations)
     db.flush()
 
-    timestamp = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    timestamp = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
     for station, temperature in zip(stations, [10.0, 20.0]):
         response = WeatherObservationResponse(
@@ -334,7 +334,7 @@ def test_observation_upsert_handles_missing_values(
     db.flush()
 
     station_id = station.id
-    timestamp = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    timestamp = datetime(2026, 10, 7, 12, tzinfo=UTC)
     measurement_fields = (
         "temperature",
         "wind_speed",

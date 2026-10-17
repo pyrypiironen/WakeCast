@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import isfinite
 
 import httpx
@@ -44,14 +44,10 @@ def get_observations(
     }
 
     if start_time is not None:
-        params["starttime"] = start_time.astimezone(timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        params["starttime"] = start_time.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if end_time is not None:
-        params["endtime"] = end_time.astimezone(timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        params["endtime"] = end_time.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     response = httpx.get(
         FMI_URL,
@@ -131,7 +127,7 @@ def parse_observations(
         if not unix_timestamp.is_integer():
             raise ValueError("Invalid FMI observation timestamp")
 
-        timestamp = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+        timestamp = datetime.fromtimestamp(unix_timestamp, tz=UTC)
 
         if timestamp in seen_timestamps:
             raise ValueError("Duplicate FMI observation timestamp")

@@ -8,6 +8,7 @@ import { selectDailyWater } from "@/lib/daily-water";
 import { getChartWindowRange, type ChartWindow } from "@/lib/chart-window";
 import type { DailyWeatherData } from "@/lib/daily-weather";
 import { translations, type Locale } from "@/lib/i18n";
+import { buildPrecipitationProbabilityCells } from "@/lib/precipitation-probability";
 
 export interface DailyWeatherChartProps {
   data: DailyWeatherData;
@@ -82,6 +83,14 @@ export function prepareDailyWeatherChart({
   const startMs = visibleRange.start.getTime();
   const endMs = visibleRange.end.getTime();
   const durationMs = endMs - startMs;
+  const precipitationCells = buildPrecipitationProbabilityCells(
+  data.forecasts.status === "ok"
+    ? data.forecasts.data.forecasts
+    : [],
+  startMs,
+  endMs,
+  Date.parse(daily.referenceTime),
+);
 
   // CloudSeries calculation
   const cloudSeries = [
@@ -243,7 +252,7 @@ export function prepareDailyWeatherChart({
     ).values(),
   ).sort((a, b) => (a.to ?? 0) - (b.to ?? 0));
 
-  return {
+    return {
     daily,
     waterHistory,
     waterReadings,
@@ -251,6 +260,7 @@ export function prepareDailyWeatherChart({
     startMs,
     endMs,
     durationMs,
+    precipitationCells,
     cloudSeries,
     cloudBridge,
     series,
@@ -259,7 +269,7 @@ export function prepareDailyWeatherChart({
     temperatureScale,
     sourceChanges,
   };
-}
+  }
 
 export type PreparedDailyWeatherChart = ReturnType<
   typeof prepareDailyWeatherChart

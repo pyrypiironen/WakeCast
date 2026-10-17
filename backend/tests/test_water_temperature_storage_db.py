@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -44,7 +44,7 @@ def make_response(station, observations):
 
 
 def test_save_water_temperature(db, water_station):
-    timestamp = datetime.now(timezone.utc)
+    timestamp = datetime.now(UTC)
     weather = make_response(
         water_station,
         [
@@ -78,7 +78,7 @@ def test_repeated_fetch_does_not_duplicate(db, water_station):
         water_station,
         [
             WaterTemperatureObservation(
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 water_temperature=11.06,
             ),
         ],
@@ -108,7 +108,7 @@ def test_repeated_fetch_does_not_duplicate(db, water_station):
 
 
 def test_corrected_measurement_updates_existing_row(db, water_station):
-    timestamp = datetime.now(timezone.utc)
+    timestamp = datetime.now(UTC)
     weather = make_response(
         water_station,
         [
@@ -139,7 +139,7 @@ def test_corrected_measurement_updates_existing_row(db, water_station):
 
 
 def test_latest_uses_measurement_time(db, water_station):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     newer = make_response(
         water_station,
@@ -179,7 +179,7 @@ def test_empty_response_preserves_existing_measurement(db, water_station):
         water_station,
         [
             WaterTemperatureObservation(
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 water_temperature=11.06,
             ),
         ],
@@ -207,7 +207,7 @@ def test_rejects_wrong_sensor(db, water_station):
         water_station,
         [
             WaterTemperatureObservation(
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 water_temperature=11.06,
             ),
         ],
@@ -246,7 +246,7 @@ def test_latest_ignores_future_readings(
     water_station,
     include_valid_reading,
 ):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     future_reading = WaterTemperatureObservationDB(
         water_temperature_station_id=water_station.id,
@@ -282,7 +282,7 @@ def test_latest_ignores_future_readings(
 
 
 def test_latest_allows_small_clock_skew(db, water_station):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     timestamp = now + timedelta(minutes=4)
 
     db.add(

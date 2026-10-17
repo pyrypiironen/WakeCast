@@ -1,5 +1,5 @@
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import wraps
 from threading import Lock
 
@@ -33,7 +33,7 @@ class WeatherJobMonitor:
         with self._lock:
             self._jobs[job_id].update(
                 status="running",
-                started_at=datetime.now(timezone.utc),
+                started_at=datetime.now(UTC),
                 finished_at=None,
                 result=None,
                 error_type=None,
@@ -45,7 +45,7 @@ class WeatherJobMonitor:
             with self._lock:
                 self._jobs[job_id].update(
                     status="failed",
-                    finished_at=datetime.now(timezone.utc),
+                    finished_at=datetime.now(UTC),
                     error_type=type(exc).__name__,
                 )
             raise
@@ -59,7 +59,7 @@ class WeatherJobMonitor:
         else:
             status = "no_items"
 
-        finished_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(UTC)
 
         with self._lock:
             state = self._jobs[job_id]

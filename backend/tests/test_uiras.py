@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import httpx
@@ -244,7 +244,7 @@ def test_measurement_timestamp_clock_skew(
     offset_seconds,
     accepted,
 ):
-    fixed_now = datetime(2026, 10, 13, 12, tzinfo=timezone.utc)
+    fixed_now = datetime(2026, 10, 13, 12, tzinfo=UTC)
 
     class FixedDatetime(datetime):
         @classmethod

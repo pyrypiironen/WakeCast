@@ -24,9 +24,11 @@ const HEIGHT = 320;
 const LEFT = 52;
 const RIGHT = 848;
 const CLOUD_AXIS_X = RIGHT + 72;
-const TOP = 40;
+const TOP = 34;
 const BOTTOM = 270;
 const HOUR_MS = 3_600_000;
+const PROBABILITY_Y = 4;
+const PROBABILITY_HEIGHT = 24;
 
 export default function DailyWeatherChartSvg({
   chart,
@@ -44,6 +46,7 @@ export default function DailyWeatherChartSvg({
     windScale,
     temperatureScale,
     sourceChanges,
+    precipitationCells,
   } = chart;
   function x(time: number): number {
     return LEFT + ((time - startMs) / durationMs) * (RIGHT - LEFT);
@@ -125,11 +128,11 @@ export default function DailyWeatherChartSvg({
       </defs>
 
       <DailyWeatherCloudLayer chart={chart} geometry={geometry} />
-      <text x={LEFT - 12} y={17} textAnchor="end" className={styles.unit}>
+      <text x={LEFT - 12} y={15} textAnchor="end" className={styles.unit}>
         °C
       </text>
 
-      <text x={RIGHT + 12} y={17} textAnchor="start" className={styles.unit}>
+      <text x={RIGHT + 12} y={15} textAnchor="start" className={styles.unit}>
         m/s
       </text>
 
@@ -154,7 +157,7 @@ export default function DailyWeatherChartSvg({
 
           <text
             x={x(time)}
-            y={BOTTOM + 25}
+           y={BOTTOM + 25}
             textAnchor={
               time === startMs ? "start" : time === endMs ? "end" : "middle"
             }
@@ -166,6 +169,60 @@ export default function DailyWeatherChartSvg({
           </text>
         </g>
       ))}
+
+
+{precipitationCells.map((cell) => {
+  // Historical observations have no measured rain probability.
+  if (cell.isPast) return null;
+
+  const boxStart = x(cell.time);
+  const boxEnd = x(cell.time + HOUR_MS);
+  const width = boxEnd - boxStart;
+  const center = (boxStart + boxEnd) / 2;
+  const known = cell.probability !== null;
+
+  return (
+    <g key={`probability-${cell.time}`}>
+      <title>
+        {`${formatLocalDate(new Date(cell.time), timeZone, locale)}
+        ${formatLocalTime(new Date(cell.time), timeZone, locale)}
+        — ${t.precipitationProbability}: ${
+          known
+            ? `${Math.round(cell.probability!)}%`
+            : t.probabilityUnavailable
+        }`}
+      </title>
+
+      <rect
+        x={boxStart + 1}
+        y={PROBABILITY_Y}
+        width={Math.max(0, width - 2)}
+        height={PROBABILITY_HEIGHT}
+        rx={2}
+        className={
+          known
+            ? styles.probabilityBox
+            : styles.probabilityMissing
+        }
+        fillOpacity={
+          known
+            ? 0.14 + 0.55 * (cell.probability! / 100)
+            : undefined
+        }
+      />
+
+      <text
+        x={center}
+        y={PROBABILITY_Y + PROBABILITY_HEIGHT / 2}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className={styles.probabilityValue}
+      >
+        {known ? `${Math.round(cell.probability!)}%` : "–"}
+      </text>
+    </g>
+  );
+})}
 
       {/* Temperature scale and horizontal gridlines */}
       {temperatureScale.ticks.map((value) => (
@@ -206,7 +263,7 @@ export default function DailyWeatherChartSvg({
       {/* Cloudiness scale: far right, 0–100% */}
       <text
         x={CLOUD_AXIS_X}
-        y={17}
+        y={15}
         textAnchor="middle"
         className={styles.cloudUnit}
       >

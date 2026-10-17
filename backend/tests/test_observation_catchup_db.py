@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -10,7 +10,7 @@ from app.models.weather import (
 from app.models.weather_db import WeatherObservationDB, WeatherStationDB
 from app.services import weather_refresh
 
-NOW = datetime(2026, 10, 14, 12, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 14, 12, tzinfo=UTC)
 
 
 def make_station(source_station_id):

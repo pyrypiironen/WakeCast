@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -11,10 +11,10 @@ def test_scheduler_starts_and_stops_with_app(monkeypatch):
     mock_scheduler = MagicMock()
     monkeypatch.setattr(main, "scheduler", mock_scheduler)
 
-    before_start = datetime.now(timezone.utc)
+    before_start = datetime.now(UTC)
 
     with TestClient(main.app) as client:
-        after_start = datetime.now(timezone.utc)
+        after_start = datetime.now(UTC)
         response = client.get("/health")
 
         assert response.status_code == 200
@@ -75,12 +75,14 @@ def test_scheduler_startup_failure(monkeypatch):
 
     monkeypatch.setattr(main, "scheduler", mock_scheduler)
 
-    with pytest.raises(
-        RuntimeError,
-        match="Simulated scheduler startup failure",
+    with (
+        pytest.raises(
+            RuntimeError,
+            match="Simulated scheduler startup failure",
+        ),
+        TestClient(main.app),
     ):
-        with TestClient(main.app):
-            pass
+        pass
 
     mock_scheduler.start.assert_called_once_with(paused=True)
     mock_scheduler.modify_job.assert_not_called()
@@ -100,12 +102,14 @@ def test_scheduler_stops_after_startup_configuration_failure(
 
     monkeypatch.setattr(main, "scheduler", mock_scheduler)
 
-    with pytest.raises(
-        RuntimeError,
-        match="Simulated startup configuration failure",
+    with (
+        pytest.raises(
+            RuntimeError,
+            match="Simulated startup configuration failure",
+        ),
+        TestClient(main.app),
     ):
-        with TestClient(main.app):
-            pass
+        pass
 
     mock_scheduler.start.assert_called_once_with(paused=True)
     mock_scheduler.shutdown.assert_called_once_with()

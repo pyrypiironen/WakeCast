@@ -100,3 +100,25 @@
   font-size: 20px;
   font-weight: 600;
 }
+
+.probabilityLabel {
+  fill: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.probabilityBox {
+  fill: #287bb5;
+}
+
+.probabilityMissing {
+  fill: var(--color-surface-soft);
+  stroke: var(--color-border);
+  stroke-width: 0.75px;
+}
+
+.probabilityValue {
+  fill: var(--color-text);
+  font-size: 12px;
+  font-weight: 400;
+}

@@ -100,9 +100,6 @@ const refresh = useCallback(async () => {
 }, [slug, timeZone]);
 
 useEffect(() => {
-  // Synchronize with the browser clock immediately after mounting.
-  setNowMs(Date.now());
-
   // Keep the forecast age current.
   const clockTimer = window.setInterval(() => {
     setNowMs(Date.now());
@@ -182,12 +179,17 @@ const freshnessLabel =
   }
 
   const series = [
-    { key: "air", label: t.air, unit: "°C" },
-    { key: "water", label: t.water, unit: "°C" },
-    { key: "wind", label: t.wind, unit: "m/s" },
-    { key: "gust", label: t.gust, unit: "m/s" },
-    { key: "cloud", label: t.cloud, unit: "%" },
-  ] as const;
+  { key: "air", label: t.air, unit: "°C" },
+  { key: "water", label: t.water, unit: "°C" },
+  { key: "wind", label: t.wind, unit: "m/s" },
+  { key: "gust", label: t.gust, unit: "m/s" },
+  { key: "cloud", label: t.cloud, unit: "%" },
+  {
+    key: "precipitationProbability",
+    label: t.precipitationProbability,
+    unit: "%",
+  },
+] as const;
 
   return (
     <div className={styles.content}>
@@ -298,9 +300,11 @@ const freshnessLabel =
         {series.map(({ key, label, unit }) => (
           <li key={key} className={styles.legendItem}>
             <span
-              className={`${styles.swatch} ${styles[key]}`}
-              aria-hidden="true"
-            />
+  className={`${styles.swatch} ${styles[key]}`}
+  aria-hidden="true"
+>
+  {key === "precipitationProbability" ? "%" : null}
+</span>
             <span>
               {label} ({unit})
             </span>

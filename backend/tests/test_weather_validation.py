@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -17,7 +17,7 @@ WEATHER_FIELDS = [
 
 def make_forecast_data():
     return {
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
         "temperature": 12.0,
         "wind_speed": 4.0,
         "wind_gust": 7.0,
@@ -52,7 +52,7 @@ def test_forecast_rejects_non_finite_values(field, value):
 )
 def test_observation_rejects_non_finite_values(field, value):
     data = {
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
         field: value,
     }
 
@@ -73,7 +73,7 @@ def test_forecast_accepts_negative_temperature_and_missing_probability():
 
 def test_observation_accepts_missing_values():
     observation = WeatherObservation(
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     for field in WEATHER_FIELDS:
@@ -82,7 +82,7 @@ def test_observation_accepts_missing_values():
 
 def test_observation_accepts_negative_temperature():
     observation = WeatherObservation(
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         temperature=-15.0,
     )
 

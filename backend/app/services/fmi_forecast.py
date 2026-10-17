@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import isfinite
 
 import httpx
@@ -139,7 +139,7 @@ def parse_forecast(
         if not unix_timestamp.is_integer():
             raise ValueError("Invalid FMI forecast timestamp")
 
-        timestamp = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+        timestamp = datetime.fromtimestamp(unix_timestamp, tz=UTC)
 
         if timestamp in seen_timestamps:
             raise ValueError("Duplicate FMI forecast timestamp")

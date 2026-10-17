@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -40,7 +40,7 @@ def make_pair(
     valid_time: datetime | None = None,
 ) -> ForecastObservationPair:
     if valid_time is None:
-        valid_time = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+        valid_time = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
     forecast = SimpleNamespace(
         timestamp=valid_time,
@@ -83,7 +83,7 @@ def test_keeps_forecast_sources_separate():
 
 
 def test_keeps_observation_timestamps_separate():
-    first_time = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    first_time = datetime(2026, 10, 7, 12, tzinfo=UTC)
     second_time = first_time + timedelta(hours=1)
 
     pairs = [
