@@ -176,19 +176,6 @@ const freshnessLabel =
     });
   }
 
-  const series = [
-  { key: "air", label: t.air, unit: "°C" },
-  { key: "water", label: t.water, unit: "°C" },
-  { key: "wind", label: t.wind, unit: "m/s" },
-  { key: "gust", label: t.gust, unit: "m/s" },
-  { key: "cloud", label: t.cloud, unit: "%" },
-  {
-    key: "precipitationProbability",
-    label: t.precipitationProbability,
-    unit: "%",
-  },
-] as const;
-
   return (
     <div className={styles.content}>
       <header className={styles.header}>
@@ -293,22 +280,6 @@ const freshnessLabel =
           </button>
         </div>
       </div>
-
-      <ul className={styles.legend} aria-label={t.legend}>
-        {series.map(({ key, label, unit }) => (
-          <li key={key} className={styles.legendItem}>
-            <span
-  className={`${styles.swatch} ${styles[key]}`}
-  aria-hidden="true"
->
-  {key === "precipitationProbability" ? "%" : null}
-</span>
-            <span>
-              {label} ({unit})
-            </span>
-          </li>
-        ))}
-      </ul>
 
       <DailyWeatherChart
         data={liveData}

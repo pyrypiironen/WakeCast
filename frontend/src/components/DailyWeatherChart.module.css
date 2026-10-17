@@ -91,6 +91,10 @@
   fill: var(--color-chart-sky);
 }
 
+.hiddenCloudBackground {
+  fill: var(--color-surface);
+}
+
 .cloudShading {
   fill: var(--color-chart-cloud);
 }

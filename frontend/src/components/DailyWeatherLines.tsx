@@ -1,11 +1,12 @@
 import { translations, type Locale } from "@/lib/i18n";
-import type { ChartLayerProps } from "./daily-weather-chart-data";
+import type { ChartLayerProps, WeatherVisibility } from "./daily-weather-chart-data";
 
 export default function DailyWeatherLines({
   chart,
   geometry,
   locale,
-}: ChartLayerProps & { locale: Locale }) {
+  visibility,
+}: ChartLayerProps & { locale: Locale; visibility: WeatherVisibility }) {
   const t = translations[locale].dailyForecast;
   const { series, transitionLines } = chart;
   const { clipId, x, y } = geometry;
@@ -13,8 +14,8 @@ export default function DailyWeatherLines({
     <>
       {/* Measurement and forecast lines */}
       <g clipPath={`url(#${clipId})`}>
-        {series.map((item) => (
-          <g key={`${item.field}-${item.kind}`}>
+        {series.filter((item) => visibility[item.field]).map((item) => (
+          <g key={`${item.field}-${item.kind}`} data-weather-layer={item.field}>
             {item.segments.map((segment, index) => {
               const label = `${item.label} — ${
                 item.kind === "measured" ? t.measured : t.forecastStyle
@@ -59,8 +60,9 @@ export default function DailyWeatherLines({
       </g>
 
       {/* Dashed transition between measurements and forecasts */}
-      {transitionLines.map((item) => (
+      {transitionLines.filter((item) => visibility[item.field]).map((item) => (
         <line
+          data-weather-layer={item.field}
           key={`transition-${item.field}`}
           clipPath={`url(#${clipId})`}
           x1={x(item.points[0].time)}

@@ -8,6 +8,7 @@ import type {
   ChartGeometry,
   DailyWeatherChartProps,
   PreparedDailyWeatherChart,
+  WeatherVisibility,
 } from "./daily-weather-chart-data";
 import styles from "./DailyWeatherChart.module.css";
 
@@ -17,6 +18,7 @@ interface DailyWeatherChartSvgProps extends Pick<
 > {
   chart: PreparedDailyWeatherChart;
   clipId: string;
+  visibility: WeatherVisibility;
 }
 
 const WIDTH = 960;
@@ -36,6 +38,7 @@ export default function DailyWeatherChartSvg({
   locale,
   timeZone,
   chartWindow,
+  visibility,
 }: DailyWeatherChartSvgProps) {
   const t = translations[locale].dailyForecast;
   const {
@@ -127,7 +130,13 @@ export default function DailyWeatherChartSvg({
         </pattern>
       </defs>
 
-      <DailyWeatherCloudLayer chart={chart} geometry={geometry} />
+      {visibility.cloud ? (
+        <g data-weather-layer="cloud">
+          <DailyWeatherCloudLayer chart={chart} geometry={geometry} />
+        </g>
+      ) : (
+        <rect x={LEFT} y={TOP} width={RIGHT - LEFT} height={BOTTOM - TOP} className={styles.hiddenCloudBackground} />
+      )}
       <text x={LEFT - 12} y={15} textAnchor="end" className={styles.unit}>
         °C
       </text>
@@ -171,7 +180,7 @@ export default function DailyWeatherChartSvg({
       ))}
 
 
-{precipitationCells.map((cell) => {
+{visibility.precipitationProbability && precipitationCells.map((cell) => {
   // Historical observations have no measured rain probability.
   if (cell.isPast) return null;
 
@@ -182,7 +191,7 @@ export default function DailyWeatherChartSvg({
   const known = cell.probability !== null;
 
   return (
-    <g key={`probability-${cell.time}`}>
+    <g key={`probability-${cell.time}`} data-weather-layer="precipitationProbability">
       <title>
         {`${formatLocalDate(new Date(cell.time), timeZone, locale)}
         ${formatLocalTime(new Date(cell.time), timeZone, locale)}
@@ -283,13 +292,13 @@ export default function DailyWeatherChartSvg({
         </text>
       ))}
 
-      <DailyWeatherWaterLine
+      {visibility.water && <DailyWeatherWaterLine
         chart={chart}
         geometry={geometry}
         locale={locale}
         timeZone={timeZone}
-      />
-      <DailyWeatherLines chart={chart} geometry={geometry} locale={locale} />
+      />}
+      <DailyWeatherLines chart={chart} geometry={geometry} locale={locale} visibility={visibility} />
       {sourceChanges.map((gap, index) => (
         <g key={`source-${index}`}>
           <title>

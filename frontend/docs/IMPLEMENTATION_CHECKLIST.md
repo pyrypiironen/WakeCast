@@ -72,7 +72,7 @@
 - [x] **3.5f** Draw continuous cloudiness shading, filled vertically from the bottom to represent the 0–100% percentage.
 - [x] **3.5g** Distinguish missing cloudiness coverage (white) from a valid 0% reading (sky color).
 - [x] **3.5h** Add a cloudiness percentage scale, hourly grid and legible day-end axis labels.
-- [x] **3.5i** Add a five-item bilingual legend: air, water, wind, gust and cloudiness. Note: the water entry is a legend placeholder until its curve is implemented.
+- [x] **3.5i** Add six bilingual interactive legend controls below the graph/time labels and above source information, in two rows: temperature/water/cloudiness and wind/gusts/precipitation probability. Preserve visibility choices across day, chart-window and data updates; distinguish hidden variables from missing data. Verified with React DOM interaction and hydration tests; desktop/mobile visual browser review remains pending.
 - [x] **3.5j** Use centralized sky/cloud CSS variables; support light/dark cloud shades and keep legend color synchronized.
 - [x] **3.5k** Show a compact localized source-information line with readable labels for FMI, ECMWF, HARMONIE, SYKE and UiRaS.
 - [x] **3.5l** Replace the gap/source-change dropdown with numbered source-change markers and a plain-text explanation at the very bottom of the chart caption.
