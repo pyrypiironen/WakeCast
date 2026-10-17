@@ -16,9 +16,7 @@ function point(
   intervalMinutes: number | null = 10,
 ): ChartPoint {
   return {
-    timestamp: new Date(
-      Date.UTC(2026, 9, 16, 10, minute),
-    ).toISOString(),
+    timestamp: new Date(Date.UTC(2026, 9, 16, 10, minute)).toISOString(),
     value,
     source,
     intervalMinutes,
@@ -87,11 +85,11 @@ assert.deepEqual(createChartScale([null], 0, 20), {
   ticks: [0, 5, 10, 15, 20],
 });
 
-  assert.deepEqual(createChartScale([], 0, 40), {
-    min: 0,
-    max: 40,
-    ticks: [0, 10, 20, 30, 40],
-  });
+assert.deepEqual(createChartScale([], 0, 40), {
+  min: 0,
+  max: 40,
+  ticks: [0, 10, 20, 30, 40],
+});
 
 test("scales include strong gusts and negative temperatures", () => {
   const wind = createChartScale([4, 23, null], 0, 15);
@@ -130,7 +128,10 @@ test("a source-only transition is distinguishable from missing samples", () => {
     point(60, 5, "ecmwf", 60),
   ]);
 
-  assert.deepEqual(result.segments.map((segment) => segment.length), [1, 1]);
+  assert.deepEqual(
+    result.segments.map((segment) => segment.length),
+    [1, 1],
+  );
   assert.equal(result.breaks.length, 1);
   assert.deepEqual(result.breaks[0].reasons, ["source-change"]);
   assert.equal(result.breaks[0].fromSource, "fmi_edited");
@@ -143,21 +144,17 @@ test("source changes do not conceal missing forecast samples", () => {
     point(180, 5, "ecmwf", 60),
   ]);
 
-  assert.deepEqual(
-    [...result.breaks[0].reasons].sort(),
-    ["missing-sample", "source-change"],
-  );
+  assert.deepEqual([...result.breaks[0].reasons].sort(), [
+    "missing-sample",
+    "source-change",
+  ]);
 });
 
 test("null measurements retain their break reason and surrounding timestamps", () => {
   const before = point(0, 4);
   const after = point(20, 5);
 
-  const result = buildLineSeries([
-    before,
-    point(10, null),
-    after,
-  ]);
+  const result = buildLineSeries([before, point(10, null), after]);
 
   assert.equal(result.breaks.length, 1);
   assert.ok(result.breaks[0].reasons.includes("missing-value"));
@@ -186,13 +183,18 @@ test("invalid timestamps are reported without inventing a position", () => {
     point(20, 6),
   ]);
 
-  assert.deepEqual(result.segments.map((segment) => segment.length), [1, 1]);
-  assert.ok(result.breaks.some(
-    (gap) =>
-      gap.from === null &&
-      gap.to === null &&
-      gap.reasons.includes("invalid-timestamp"),
-  ));
+  assert.deepEqual(
+    result.segments.map((segment) => segment.length),
+    [1, 1],
+  );
+  assert.ok(
+    result.breaks.some(
+      (gap) =>
+        gap.from === null &&
+        gap.to === null &&
+        gap.reasons.includes("invalid-timestamp"),
+    ),
+  );
 });
 
 test("measurement-to-forecast transition preserves valid gaps", () => {
@@ -212,21 +214,14 @@ test("measurement-to-forecast transition preserves valid gaps", () => {
 
   const maxGap = 2 * 60 * 60 * 1000;
 
-  assert.deepEqual(
-    measuredForecastBridge(observation, forecast, maxGap),
-    [
-      { time: Date.parse(observation.timestamp), value: 5 },
-      { time: Date.parse(forecast.timestamp), value: 7 },
-    ],
-  );
+  assert.deepEqual(measuredForecastBridge(observation, forecast, maxGap), [
+    { time: Date.parse(observation.timestamp), value: 5 },
+    { time: Date.parse(forecast.timestamp), value: 7 },
+  ]);
 
   // A missing measurement must remain a visible gap.
   assert.equal(
-    measuredForecastBridge(
-      { ...observation, value: null },
-      forecast,
-      maxGap,
-    ),
+    measuredForecastBridge({ ...observation, value: null }, forecast, maxGap),
     null,
   );
 
@@ -253,30 +248,19 @@ test("measurement-to-forecast transition preserves valid gaps", () => {
 
 test("forecast source changes connect without hiding missing data", () => {
   const continuous = buildLineSeries(
-    [
-      point(0, 4, "fmi_edited", 60),
-      point(60, 5, "ecmwf", 60),
-    ],
+    [point(0, 4, "fmi_edited", 60), point(60, 5, "ecmwf", 60)],
     { connectSourceChanges: true },
   );
 
   assert.deepEqual(
-    continuous.segments.map((segment) =>
-      segment.map((item) => item.value)
-    ),
+    continuous.segments.map((segment) => segment.map((item) => item.value)),
     [[4, 5]],
   );
 
-  assert.deepEqual(
-    continuous.breaks[0].reasons,
-    ["source-change"],
-  );
+  assert.deepEqual(continuous.breaks[0].reasons, ["source-change"]);
 
   const missing = buildLineSeries(
-    [
-      point(0, 4, "fmi_edited", 60),
-      point(180, 5, "ecmwf", 60),
-    ],
+    [point(0, 4, "fmi_edited", 60), point(180, 5, "ecmwf", 60)],
     { connectSourceChanges: true },
   );
 
@@ -285,7 +269,5 @@ test("forecast source changes connect without hiding missing data", () => {
     [1, 1],
   );
 
-  assert.ok(
-    missing.breaks[0].reasons.includes("missing-sample"),
-  );
+  assert.ok(missing.breaks[0].reasons.includes("missing-sample"));
 });

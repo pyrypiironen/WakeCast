@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -40,7 +39,11 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AppHeader locale={lang} />
-        <main id="main-content" tabIndex={-1} className="content-width page-content">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="content-width page-content"
+        >
           {children}
         </main>
       </body>

@@ -4,10 +4,7 @@ export type ChartWindow = "12h" | "24h";
 
 const HOUR_MS = 3_600_000;
 
-function localHour(
-  instant: Date,
-  timeZone: string,
-): number {
+function localHour(instant: Date, timeZone: string): number {
   const formatter = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
@@ -29,10 +26,7 @@ export function defaultChartWindow(
   requestedAt: string,
   timeZone: string,
 ): ChartWindow {
-  const hour = localHour(
-    parseTimestamp(requestedAt),
-    timeZone,
-  );
+  const hour = localHour(parseTimestamp(requestedAt), timeZone);
 
   return hour >= 9 && hour < 21 ? "12h" : "24h";
 }
@@ -69,9 +63,7 @@ export function getChartWindowRange(
   }
 
   if (!start || !end) {
-    throw new RangeError(
-      "Could not determine the 09:00–21:00 window",
-    );
+    throw new RangeError("Could not determine the 09:00–21:00 window");
   }
 
   return { start, end };

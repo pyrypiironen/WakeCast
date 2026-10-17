@@ -44,10 +44,7 @@ test("held intervals retain real sample timestamps and stop at reference time", 
   const measured = reading("2026-10-16T08:00:00Z", 11);
 
   const result = selectDailyWater(
-    input([
-      measured,
-      reading("2026-10-16T13:00:00Z", 99),
-    ], earlier),
+    input([measured, reading("2026-10-16T13:00:00Z", 99)], earlier),
     "2026-10-16",
     "Europe/Helsinki",
   );
@@ -135,11 +132,7 @@ test("autumn DST day uses its latest preceding reading for the full 25 hours", (
 });
 
 test("empty history and failed sources remain distinct", () => {
-  const empty = selectDailyWater(
-    input([]),
-    "2026-10-16",
-    "Europe/Helsinki",
-  );
+  const empty = selectDailyWater(input([]), "2026-10-16", "Europe/Helsinki");
 
   assert.equal(empty.water.status, "ok");
   if (empty.water.status !== "ok") assert.fail("Expected successful history");

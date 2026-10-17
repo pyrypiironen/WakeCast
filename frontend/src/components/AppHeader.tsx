@@ -6,11 +6,15 @@ export default function AppHeader({ locale }: { locale: Locale }) {
   const t = translations[locale];
   return (
     <>
-      <a className="skip-link" href="#main-content">{t.skipToContent}</a>
+      <a className="skip-link" href="#main-content">
+        {t.skipToContent}
+      </a>
       <header className="site-header">
         <div className="content-width header-content">
           <Link className="brand" href={`/${locale}`} aria-label={t.homeLabel}>
-            <span className="brand-mark" aria-hidden="true">≈</span>
+            <span className="brand-mark" aria-hidden="true">
+              ≈
+            </span>
             WakeCast
           </Link>
           <LanguageSwitcher locale={locale} />

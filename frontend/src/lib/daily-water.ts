@@ -1,8 +1,5 @@
 import { localDayRange, parseTimestamp } from "./date";
-import type {
-  DailyWeatherData,
-  WeatherDataResult,
-} from "./daily-weather";
+import type { DailyWeatherData, WeatherDataResult } from "./daily-weather";
 import type {
   ParkWaterTemperatureHistoryResponse,
   WaterTemperatureHistoryPoint,
@@ -16,8 +13,7 @@ export interface HeldWaterInterval {
   fetchedAt: string;
 }
 
-export interface DailyWaterPayload
-  extends ParkWaterTemperatureHistoryResponse {
+export interface DailyWaterPayload extends ParkWaterTemperatureHistoryResponse {
   heldIntervals: HeldWaterInterval[];
 }
 
@@ -72,22 +68,17 @@ export function selectDailyWater(
   }
 
   const samples = [
-    ...(payload.preceding_observation
-      ? [payload.preceding_observation]
-      : []),
+    ...(payload.preceding_observation ? [payload.preceding_observation] : []),
     ...payload.observations,
   ]
     .filter((point) => time(point) <= referenceMs && time(point) < endMs)
     .sort((a, b) => time(a) - time(b));
 
-  const preceding = samples.filter((point) => time(point) < startMs).at(-1)
-    ?? null;
+  const preceding =
+    samples.filter((point) => time(point) < startMs).at(-1) ?? null;
 
   const observations = samples.filter((point) => time(point) >= startMs);
-  const anchors = [
-    ...(preceding ? [preceding] : []),
-    ...observations,
-  ];
+  const anchors = [...(preceding ? [preceding] : []), ...observations];
 
   const heldIntervals: HeldWaterInterval[] = [];
 
@@ -96,10 +87,7 @@ export function selectDailyWater(
     const next = anchors[index + 1];
 
     const intervalStart = Math.max(startMs, time(point));
-    const intervalEnd = Math.min(
-      cutoffMs,
-      next ? time(next) : cutoffMs,
-    );
+    const intervalEnd = Math.min(cutoffMs, next ? time(next) : cutoffMs);
 
     if (intervalStart >= intervalEnd) continue;
 

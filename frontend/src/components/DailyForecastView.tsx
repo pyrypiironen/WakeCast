@@ -2,18 +2,12 @@
 
 import { useState } from "react";
 
-import {
-  addCalendarDays,
-  localDayRange,
-} from "@/lib/date";
+import { addCalendarDays, localDayRange } from "@/lib/date";
 import { translations, type Locale } from "@/lib/i18n";
 import DailyWeatherChart from "./DailyWeatherChart";
 import type { DailyWeatherData } from "@/lib/daily-weather";
 import styles from "./DailyForecast.module.css";
-import {
-  defaultChartWindow,
-  type ChartWindow,
-} from "@/lib/chart-window";
+import { defaultChartWindow, type ChartWindow } from "@/lib/chart-window";
 
 interface DailyForecastViewProps {
   locale: Locale;
@@ -28,8 +22,8 @@ export default function DailyForecastView({
 }: DailyForecastViewProps) {
   const today = data.today;
   const [selectedDate, setSelectedDate] = useState(today);
-  const [chartWindow, setChartWindow] = useState<ChartWindow>(
-  () => defaultChartWindow(data.requestedAt, timeZone),
+  const [chartWindow, setChartWindow] = useState<ChartWindow>(() =>
+    defaultChartWindow(data.requestedAt, timeZone),
   );
 
   const t = translations[locale].dailyForecast;
@@ -40,21 +34,19 @@ export default function DailyForecastView({
   const { start } = localDayRange(selectedDate, timeZone);
 
   const displayDate = new Intl.DateTimeFormat(
-  locale === "fi" ? "fi-FI" : "en-GB",
-  {
-    timeZone,
-    day: "numeric",
-    month: "long",
-  },
-).format(start);
+    locale === "fi" ? "fi-FI" : "en-GB",
+    {
+      timeZone,
+      day: "numeric",
+      month: "long",
+    },
+  ).format(start);
 
   function moveDay(offset: number) {
     setSelectedDate((current) => {
       const next = addCalendarDays(current, offset);
 
-      return next >= earliestDate && next <= latestDate
-        ? next
-        : current;
+      return next >= earliestDate && next <= latestDate ? next : current;
     });
   }
 
@@ -76,8 +68,6 @@ export default function DailyForecastView({
       </header>
 
       <div className={styles.navigation}>
-
-
         <button
           type="button"
           className={styles.dayButton}
@@ -110,45 +100,37 @@ export default function DailyForecastView({
         </button>
 
         {/* Date in navigation row */}
-      <p
-  className={styles.date}
-  aria-live="polite"
-  aria-atomic="true"
->
-  {isToday && `${t.today} · `}
-  <time dateTime={selectedDate}>
-    {displayDate}
-  </time>
-</p>
+        <p className={styles.date} aria-live="polite" aria-atomic="true">
+          {isToday && `${t.today} · `}
+          <time dateTime={selectedDate}>{displayDate}</time>
+        </p>
 
-{/* PARTIAL CHANGE — Chart display selector */}
-<div
-  className={styles.chartWindowSwitch}
-  role="group"
-  aria-label={
-    locale === "fi"
-      ? "Kuvaajan aikaväli"
-      : "Chart time range"
-  }
->
-  <button
-    type="button"
-    className={styles.windowButton}
-    aria-pressed={chartWindow === "12h"}
-    onClick={() => setChartWindow("12h")}
-  >
-    09–21
-  </button>
+        {/* PARTIAL CHANGE — Chart display selector */}
+        <div
+          className={styles.chartWindowSwitch}
+          role="group"
+          aria-label={
+            locale === "fi" ? "Kuvaajan aikaväli" : "Chart time range"
+          }
+        >
+          <button
+            type="button"
+            className={styles.windowButton}
+            aria-pressed={chartWindow === "12h"}
+            onClick={() => setChartWindow("12h")}
+          >
+            09–21
+          </button>
 
-  <button
-    type="button"
-    className={styles.windowButton}
-    aria-pressed={chartWindow === "24h"}
-    onClick={() => setChartWindow("24h")}
-  >
-    24h
-  </button>
-</div>
+          <button
+            type="button"
+            className={styles.windowButton}
+            aria-pressed={chartWindow === "24h"}
+            onClick={() => setChartWindow("24h")}
+          >
+            24h
+          </button>
+        </div>
       </div>
 
       <ul className={styles.legend} aria-label={t.legend}>
@@ -172,7 +154,6 @@ export default function DailyForecastView({
         locale={locale}
         chartWindow={chartWindow}
       />
-
     </div>
   );
 }

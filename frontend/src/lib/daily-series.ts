@@ -1,8 +1,5 @@
 import { localDayRange, parseTimestamp } from "./date";
-import type {
-  DailyWeatherData,
-  WeatherDataResult,
-} from "./daily-weather";
+import type { DailyWeatherData, WeatherDataResult } from "./daily-weather";
 
 type DailyAirWeatherInput = Pick<
   DailyWeatherData,
@@ -38,10 +35,10 @@ export function selectDailyAirWeather(
   const referenceMs = parseTimestamp(input.requestedAt).getTime();
 
   // Include the following midnight only as the chart's closing point.
-function withinDay(timestamp: string): boolean {
-  const time = parseTimestamp(timestamp).getTime();
-  return time >= startMs && time <= endMs;
-}
+  function withinDay(timestamp: string): boolean {
+    const time = parseTimestamp(timestamp).getTime();
+    return time >= startMs && time <= endMs;
+  }
 
   function byTimestamp(
     a: { timestamp: string },
@@ -64,19 +61,15 @@ function withinDay(timestamp: string): boolean {
       .sort(byTimestamp),
   }));
 
-    // Include the following midnight as a closing graph point.
-    // Observation selection remains [start, end).
+  // Include the following midnight as a closing graph point.
+  // Observation selection remains [start, end).
   const forecasts = mapAvailable(input.forecasts, (payload) => ({
     ...payload,
     forecasts: payload.forecasts
       .filter((point) => {
         const time = parseTimestamp(point.timestamp).getTime();
 
-        return (
-          time >= startMs &&
-          time <= endMs &&
-          time >= referenceMs
-        );
+        return time >= startMs && time <= endMs && time >= referenceMs;
       })
       .sort(byTimestamp),
   }));
