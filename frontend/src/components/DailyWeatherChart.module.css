@@ -126,3 +126,24 @@
   font-size: 12px;
   font-weight: 400;
 }
+
+.nowMarker {
+  pointer-events: none;
+}
+
+.nowLine {
+  stroke: #ff0000;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.nowLabelBackground {
+  fill: #ff0000;
+}
+
+.nowLabel {
+  fill: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

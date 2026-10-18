@@ -4,6 +4,7 @@ import { sourceNames } from "./DailyWeatherAvailability";
 import DailyWeatherCloudLayer from "./DailyWeatherCloudLayer";
 import DailyWeatherLines from "./DailyWeatherLines";
 import DailyWeatherWaterLine from "./DailyWeatherWaterLine";
+import DailyWeatherNowMarker from "./DailyWeatherNowMarker";
 import type {
   ChartGeometry,
   DailyWeatherChartProps,
@@ -22,7 +23,7 @@ interface DailyWeatherChartSvgProps extends Pick<
 }
 
 const WIDTH = 960;
-const HEIGHT = 320;
+const HEIGHT = 310;
 const LEFT = 52;
 const RIGHT = 848;
 const CLOUD_AXIS_X = RIGHT + 72;
@@ -167,9 +168,7 @@ export default function DailyWeatherChartSvg({
           <text
             x={x(time)}
            y={BOTTOM + 25}
-            textAnchor={
-              time === startMs ? "start" : time === endMs ? "end" : "middle"
-            }
+            textAnchor="middle"
             className={styles.tick}
           >
             {chartWindow === "24h" && time === endMs
@@ -330,6 +329,13 @@ export default function DailyWeatherChartSvg({
         d={`M ${LEFT} ${TOP} V ${BOTTOM} H ${RIGHT} V ${TOP}`}
         fill="none"
         className={styles.axis}
+      />
+      <DailyWeatherNowMarker
+        startMs={startMs}
+        endMs={endMs}
+        geometry={geometry}
+        timeZone={timeZone}
+        locale={locale}
       />
     </svg>
   );
