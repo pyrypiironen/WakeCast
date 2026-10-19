@@ -4,7 +4,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding-left: 25px;
+  padding-left: 0px;
 }
 
 .dayButton {
@@ -164,7 +164,7 @@
 }
 
 /* Mobile navigation */
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   .navigation {
     padding-left: 0;
     padding-right: 0;

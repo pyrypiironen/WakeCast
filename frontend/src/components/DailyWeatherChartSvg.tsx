@@ -24,7 +24,7 @@ interface DailyWeatherChartSvgProps extends Pick<
 
 const WIDTH = 960;
 const HEIGHT = 310;
-const LEFT = 52;
+const LEFT = 30;
 const RIGHT = 848;
 const CLOUD_AXIS_X = RIGHT + 72;
 const TOP = 34;
@@ -336,6 +336,7 @@ export default function DailyWeatherChartSvg({
         geometry={geometry}
         timeZone={timeZone}
         locale={locale}
+        chart={chart}
       />
     </svg>
   );

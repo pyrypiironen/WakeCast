@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type TouchEvent,
+} from "react";
 
 import type { Locale } from "@/lib/i18n";
-import type { ChartGeometry } from "./daily-weather-chart-data";
+import type {
+  ChartGeometry,
+  PreparedDailyWeatherChart,
+} from "./daily-weather-chart-data";
 import styles from "./DailyWeatherChart.module.css";
 
 interface Props {
@@ -12,11 +20,124 @@ interface Props {
   geometry: ChartGeometry;
   timeZone: string;
   locale: Locale;
+  chart: PreparedDailyWeatherChart;
+}
+
+interface CursorPosition {
+  x: number;
+  startMs: number;
+  endMs: number;
+}
+
+interface WeatherSample {
+  timestamp: string;
+  kind: "measured" | "forecast";
+  temperature: number | null;
+  windSpeed: number | null;
+  windGust: number | null;
+  cloudiness: number | null;
 }
 
 const MINUTE_MS = 60_000;
-const LABEL_WIDTH = 38;
-const LABEL_HEIGHT = 11;
+const KEYBOARD_STEP_MINUTES = 15;
+
+const PANEL_WIDTH = 144;
+const PANEL_HEIGHT = 108;
+const PANEL_GAP = 10;
+
+function formatValue(value: number | null | undefined): string {
+  return value != null && Number.isFinite(value)
+    ? value.toFixed(1)
+    : "–";
+}
+
+function findWeatherSample(
+  chart: PreparedDailyWeatherChart,
+  timeMs: number,
+): WeatherSample | null {
+  let best: WeatherSample | null = null;
+  let bestDistance = Infinity;
+
+  function consider(
+    sample: WeatherSample,
+    toleranceMs: number,
+  ) {
+    const timestamp = Date.parse(sample.timestamp);
+    const distance = Math.abs(timestamp - timeMs);
+
+    if (
+      Number.isFinite(distance) &&
+      distance <= toleranceMs &&
+      distance < bestDistance
+    ) {
+      best = sample;
+      bestDistance = distance;
+    }
+  }
+
+  if (chart.daily.observations.status === "ok") {
+    for (const point of chart.daily.observations.data.observations) {
+      const intervalMinutes = point.resolution_minutes;
+
+      const toleranceMs =
+        intervalMinutes !== null &&
+        Number.isFinite(intervalMinutes) &&
+        intervalMinutes > 0
+          ? Math.min(intervalMinutes / 2, 30) * MINUTE_MS
+          : 0;
+
+      consider(
+        {
+          timestamp: point.timestamp,
+          kind: "measured",
+          temperature: point.temperature,
+          windSpeed: point.wind_speed,
+          windGust: point.wind_gust,
+          cloudiness: point.cloudiness,
+        },
+        toleranceMs,
+      );
+    }
+  }
+
+  if (chart.daily.forecasts.status === "ok") {
+    for (const point of chart.daily.forecasts.data.forecasts) {
+      consider(
+        {
+          timestamp: point.timestamp,
+          kind: "forecast",
+          temperature: point.temperature,
+          windSpeed: point.wind_speed,
+          windGust: point.wind_gust,
+          cloudiness: point.cloudiness,
+        },
+        30 * MINUTE_MS,
+      );
+    }
+  }
+
+  return best;
+}
+
+function findWaterTemperature(
+  chart: PreparedDailyWeatherChart,
+  timeMs: number,
+): number | null {
+  const interval = chart.waterHistory?.heldIntervals.find(
+    (item) =>
+      Date.parse(item.start) <= timeMs &&
+      timeMs < Date.parse(item.end),
+  );
+
+  if (interval) return interval.waterTemperature;
+
+  // Include an actual reading at its exact timestamp.
+  const exactReading = chart.waterReadings.find(
+    (point) => Date.parse(point.timestamp) === timeMs,
+  );
+
+  return exactReading?.water_temperature ?? null;
+}
 
 export default function DailyWeatherNowMarker({
   startMs,
@@ -24,103 +145,293 @@ export default function DailyWeatherNowMarker({
   geometry,
   timeZone,
   locale,
+  chart,
 }: Props) {
-  const [nowMs, setNowMs] = useState<number | null>(null);
+  const [cursor, setCursor] = useState<CursorPosition | null>(null);
 
-  useEffect(() => {
-    let timer: number | undefined;
+  const { left, right, top, bottom } = geometry;
+  const durationMinutes = (endMs - startMs) / MINUTE_MS;
 
-    function synchronize() {
-      window.clearTimeout(timer);
+  const markerX =
+    cursor?.startMs === startMs && cursor.endMs === endMs
+      ? cursor.x
+      : null;
 
-      if (document.hidden) return;
-
-      const now = Date.now();
-
-      // Position and label represent the current minute.
-      setNowMs(Math.floor(now / MINUTE_MS) * MINUTE_MS);
-
-      // Schedule at the next minute boundary.
-      timer = window.setTimeout(
-        synchronize,
-        MINUTE_MS - (now % MINUTE_MS),
-      );
-    }
-
-    // Start after hydration, keeping server/client markup consistent.
-    timer = window.setTimeout(synchronize, 0);
-
-    document.addEventListener("visibilitychange", synchronize);
-    window.addEventListener("focus", synchronize);
-
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", synchronize);
-      window.removeEventListener("focus", synchronize);
-    };
-  }, []);
-
-  // The selected day's window uses actual timezone-aware timestamps.
-  // Historical/future days and times outside the window have no marker.
-  if (nowMs === null || nowMs < startMs || nowMs >= endMs) {
-    return null;
+  function moveToX(value: number) {
+    setCursor({
+      x: Math.max(left, Math.min(right, value)),
+      startMs,
+      endMs,
+    });
   }
 
-  const { left, right, top, bottom, x } = geometry;
-  const markerX = x(nowMs);
+  function updateFromPointer(event: PointerEvent<SVGRectElement>) {
+    const matrix = event.currentTarget.getScreenCTM();
+    if (!matrix) return;
 
-  const labelX = Math.max(
-    left,
-    Math.min(markerX - LABEL_WIDTH / 2, right - LABEL_WIDTH),
+    const point = new DOMPoint(
+      event.clientX,
+      event.clientY,
+    ).matrixTransform(matrix.inverse());
+
+    moveToX(point.x);
+  }
+
+  function handlePointerDown(event: PointerEvent<SVGRectElement>) {
+    if (event.pointerType !== "touch") {
+      updateFromPointer(event);
+    }
+  }
+
+  function handlePointerMove(event: PointerEvent<SVGRectElement>) {
+    if (event.pointerType !== "touch") {
+      updateFromPointer(event);
+    }
+  }
+
+  function updateFromTouch(event: TouchEvent<SVGRectElement>) {
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    const matrix = event.currentTarget.getScreenCTM();
+    if (!matrix) return;
+
+    const point = new DOMPoint(
+      touch.clientX,
+      touch.clientY,
+    ).matrixTransform(matrix.inverse());
+
+    moveToX(point.x);
+  }
+
+  const selectedMinute = Math.round(
+    (((markerX ?? left) - left) / (right - left)) *
+      durationMinutes,
   );
 
-  // Use HH:mm in both languages, always in the park's timezone.
-  const timeLabel = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(new Date(nowMs));
+  const selectedTimestamp =
+    startMs + selectedMinute * MINUTE_MS;
 
-  const accessibleLabel =
-    `${locale === "fi" ? "Nykyinen aika" : "Current time"}: ` +
-    `${timeLabel} (${timeZone})`;
+  const clock = new Intl.DateTimeFormat(
+    locale === "fi" ? "fi-FI" : "en-GB",
+    {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    },
+  );
+
+  const selectedTime = clock.format(new Date(selectedTimestamp));
+
+  const weather = markerX !== null
+    ? findWeatherSample(chart, selectedTimestamp)
+    : null;
+
+  const water = markerX !== null
+    ? findWaterTemperature(chart, selectedTimestamp)
+    : null;
+
+  const wind = weather
+    ? `${formatValue(weather.windSpeed)} (${formatValue(weather.windGust)}) m/s`
+    : "– (–) m/s";
+
+  const cloud =
+    weather?.cloudiness != null &&
+    Number.isFinite(weather.cloudiness)
+      ? `${Math.round(weather.cloudiness)}%`
+      : "–";
+
+  const labels =
+    locale === "fi"
+      ? {
+          air: "Ilma",
+          water: "Vesi",
+          wind: "Tuuli",
+          cloud: "Pilvet",
+        }
+      : {
+          air: "Air",
+          water: "Water",
+          wind: "Wind",
+          cloud: "Cloud",
+        };
+
+  function handleKeyDown(event: KeyboardEvent<SVGRectElement>) {
+    let nextMinute = selectedMinute;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        nextMinute -= KEYBOARD_STEP_MINUTES;
+        break;
+      case "ArrowRight":
+        nextMinute += KEYBOARD_STEP_MINUTES;
+        break;
+      case "Home":
+        nextMinute = 0;
+        break;
+      case "End":
+        nextMinute = durationMinutes;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+
+    const clampedMinute = Math.max(
+      0,
+      Math.min(durationMinutes, nextMinute),
+    );
+
+    moveToX(
+      left +
+        (clampedMinute / durationMinutes) * (right - left),
+    );
+  }
+
+  // Position the box to the right unless it would overflow.
+  const panelX =
+    markerX === null
+      ? left
+      : markerX + PANEL_GAP + PANEL_WIDTH <= right
+        ? markerX + PANEL_GAP
+        : markerX - PANEL_GAP - PANEL_WIDTH;
+
+  const panelY = top + 2;
+
+  const rows = [
+    {
+      label: labels.air,
+      value: weather
+        ? `${formatValue(weather.temperature)}°C`
+        : "–",
+    },
+    {
+      label: labels.water,
+      value: water !== null
+        ? `${formatValue(water)}°C`
+        : "–",
+    },
+    { label: labels.wind, value: wind },
+    { label: labels.cloud, value: cloud },
+  ];
 
   return (
-    <g
-      className={styles.nowMarker}
-      data-now-marker=""
-      role="img"
-      aria-label={accessibleLabel}
-    >
-      <title>{accessibleLabel}</title>
-
-      <line
-        x1={markerX}
-        x2={markerX}
-        y1={top}
-        y2={bottom}
-        className={styles.nowLine}
-      />
-
+    <>
       <rect
-        x={labelX}
-        y={bottom + 2}
-        width={LABEL_WIDTH}
-        height={LABEL_HEIGHT}
-        rx={2}
-        className={styles.nowLabelBackground}
+        x={left}
+        y={top}
+        width={right - left}
+        height={bottom - top}
+        fill="transparent"
+        className={styles.inspectionTarget}
+        role="slider"
+        tabIndex={0}
+        aria-orientation="horizontal"
+        aria-label={
+          locale === "fi"
+            ? "Tarkastele sääkuvaajan ajankohtaa"
+            : "Inspect weather chart time"
+        }
+        aria-valuemin={0}
+        aria-valuemax={durationMinutes}
+        aria-valuenow={selectedMinute}
+        aria-valuetext={selectedTime}
+        onPointerEnter={(event) => {
+          if (event.pointerType !== "touch") {
+            updateFromPointer(event);
+          }
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={(event) => {
+          if (event.pointerType !== "touch") {
+            setCursor(null);
+          }
+        }}
+        onPointerCancel={(event) => {
+          if (event.pointerType !== "touch") {
+            setCursor(null);
+          }
+        }}
+        onTouchStart={updateFromTouch}
+        onTouchMove={updateFromTouch}
+        onTouchEnd={() => setCursor(null)}
+        onTouchCancel={() => setCursor(null)}
+        onFocus={() => {
+          if (markerX === null) moveToX(left);
+        }}
+        onBlur={() => setCursor(null)}
+        onKeyDown={handleKeyDown}
       />
 
-      <text
-        x={labelX + LABEL_WIDTH / 2}
-        y={bottom + 2 + LABEL_HEIGHT / 2}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className={styles.nowLabel}
-      >
-        {timeLabel}
-      </text>
-    </g>
+      {markerX !== null && (
+        <g
+          className={styles.nowMarker}
+          data-inspection-marker=""
+        >
+          <line
+            x1={markerX}
+            x2={markerX}
+            y1={top}
+            y2={bottom}
+            className={styles.nowLine}
+          />
+
+          <g className={styles.inspectionPanel}>
+            <title>
+              {weather
+                ? `${
+                    weather.kind === "measured"
+                      ? locale === "fi" ? "Havainto" : "Observation"
+                      : locale === "fi" ? "Ennuste" : "Forecast"
+                  }: ${clock.format(new Date(weather.timestamp))}`
+                : locale === "fi"
+                  ? "Ei säätietoja"
+                  : "No weather data"}
+            </title>
+
+            <rect
+              x={panelX}
+              y={panelY}
+              width={PANEL_WIDTH}
+              height={PANEL_HEIGHT}
+              rx={7}
+              className={styles.inspectionPanelBackground}
+            />
+
+            <text
+              x={panelX + 12}
+              y={panelY + 20}
+              className={styles.inspectionPanelTime}
+            >
+              {selectedTime}
+            </text>
+
+            {rows.map((row, index) => (
+              <g key={row.label}>
+                <text
+                  x={panelX + 12}
+                  y={panelY + 43 + index * 18}
+                  className={styles.inspectionPanelLabel}
+                >
+                  {row.label}
+                </text>
+
+                <text
+                  x={panelX + PANEL_WIDTH - 12}
+                  y={panelY + 43 + index * 18}
+                  textAnchor="end"
+                  className={styles.inspectionPanelValue}
+                >
+                  {row.value}
+                </text>
+              </g>
+            ))}
+          </g>
+        </g>
+      )}
+    </>
   );
 }

@@ -53,6 +53,7 @@
   width: 100%;
   min-width: 600px;
   height: auto;
+  touch-action: none;
 }
 
 .grid {
@@ -137,13 +138,50 @@
   vector-effect: non-scaling-stroke;
 }
 
-.nowLabelBackground {
-  fill: #ff0000;
+.inspectionTarget {
+  cursor: crosshair;
+  touch-action: pan-y;
 }
 
-.nowLabel {
-  fill: #ffffff;
-  font-size: 10px;
+.inspectionTarget:focus-visible {
+  outline: none;
+  stroke: #ff0000;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.inspectionPanel {
+  pointer-events: none;
+}
+
+.inspectionPanelBackground {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.inspectionPanelDivider {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.inspectionPanelTime {
+  fill: var(--color-text);
+  font-size: 16px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspectionPanelLabel {
+  fill: var(--color-muted);
+  font-size: 12px;
+}
+
+.inspectionPanelValue {
+  fill: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
