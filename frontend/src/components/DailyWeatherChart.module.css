@@ -185,3 +185,14 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+.missingCloudBackground {
+  fill: var(--color-chart-sky);
+}
+
+.missingCloudHatch {
+  fill: none;
+  stroke: #9ca3af;
+  stroke-opacity: 0.6;
+  stroke-width: 1;
+}

@@ -127,7 +127,15 @@ export default function DailyWeatherChartSvg({
           height={8}
           patternUnits="userSpaceOnUse"
         >
-          <rect width={8} height={8} fill="#ffffff" />
+          <rect
+            width={8}
+            height={8}
+            className={styles.missingCloudBackground}
+          />
+          <path
+            d="M-2 2L2-2 M0 8L8 0 M6 10L10 6"
+            className={styles.missingCloudHatch}
+          />
         </pattern>
       </defs>
 

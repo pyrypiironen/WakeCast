@@ -6,6 +6,7 @@ import DailyWeatherAvailability, {
   sourceNames,
 } from "./DailyWeatherAvailability";
 import DailyWeatherChartSvg from "./DailyWeatherChartSvg";
+import DailyWeatherDataStatus from "./DailyWeatherDataStatus";
 import DailyWeatherLegend from "./DailyWeatherLegend";
 import {
   prepareDailyWeatherChart,
@@ -51,6 +52,12 @@ export default function DailyWeatherChart(props: DailyWeatherChartProps) {
           }
         />
         <DailyWeatherAvailability
+          data={data}
+          selectedDate={selectedDate}
+          timeZone={timeZone}
+          locale={locale}
+        />
+        <DailyWeatherDataStatus
           data={data}
           selectedDate={selectedDate}
           timeZone={timeZone}

@@ -17,7 +17,7 @@ interface DailyForecastViewProps {
   data: DailyWeatherData;
 }
 
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 60_000;
 
 export default function DailyForecastView({
   slug,
@@ -99,36 +99,47 @@ const refresh = useCallback(async () => {
   }
 }, [slug, timeZone]);
 
-useEffect(() => {
-  // Keep the forecast age current.
-  const clockTimer = window.setInterval(() => {
-    setNowMs(Date.now());
-  }, 30_000);
+  useEffect(() => {
+    function tick() {
+      if (document.visibilityState !== "visible") return;
 
-  return () => window.clearInterval(clockTimer);
-}, []);
+      const now = Date.now();
+      setNowMs(now);
 
-useEffect(() => {
-  function refreshIfNeeded() {
-    if (
-      document.visibilityState === "visible" &&
-      Date.now() - lastRefreshAttempt.current >= REFRESH_INTERVAL_MS
-    ) {
-      void refresh();
+      if (
+        now - lastRefreshAttempt.current >= REFRESH_INTERVAL_MS
+      ) {
+        void refresh();
+      }
     }
-  }
 
-  const interval = window.setInterval(refreshIfNeeded, 30_000);
+    function handleReturn() {
+      if (document.visibilityState !== "visible") return;
 
-  document.addEventListener("visibilitychange", refreshIfNeeded);
-  window.addEventListener("focus", refreshIfNeeded);
+      const now = Date.now();
+      setNowMs(now);
 
-  return () => {
-    window.clearInterval(interval);
-    document.removeEventListener("visibilitychange", refreshIfNeeded);
-    window.removeEventListener("focus", refreshIfNeeded);
-  };
-}, [refresh]);
+      // Avoid duplicate requests from simultaneous focus/visibility events.
+      if (now - lastRefreshAttempt.current >= 5_000) {
+        void refresh();
+      }
+    }
+
+    tick();
+
+    const timer = window.setInterval(tick, 1_000);
+
+    document.addEventListener("visibilitychange", handleReturn);
+    window.addEventListener("focus", handleReturn);
+    window.addEventListener("online", handleReturn);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleReturn);
+      window.removeEventListener("focus", handleReturn);
+      window.removeEventListener("online", handleReturn);
+    };
+  }, [refresh]);
   const today = liveData.today;
   const [selectedDate, setSelectedDate] = useState(today);
   const [chartWindow, setChartWindow] = useState<ChartWindow>(() =>
