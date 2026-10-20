@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { formatLocalDate, formatLocalTime } from "@/lib/date";
 import { translations } from "@/lib/i18n";
 import { sourceNames } from "./DailyWeatherAvailability";
@@ -20,15 +21,15 @@ interface DailyWeatherChartSvgProps extends Pick<
   chart: PreparedDailyWeatherChart;
   clipId: string;
   visibility: WeatherVisibility;
+  fitToContainer?: boolean;
 }
 
 const WIDTH = 960;
-const HEIGHT = 310;
+const DEFAULT_HEIGHT = 310;
 const LEFT = 30;
 const RIGHT = 848;
 const CLOUD_AXIS_X = RIGHT + 72;
 const TOP = 34;
-const BOTTOM = 270;
 const HOUR_MS = 3_600_000;
 const PROBABILITY_Y = 4;
 const PROBABILITY_HEIGHT = 24;
@@ -40,7 +41,69 @@ export default function DailyWeatherChartSvg({
   timeZone,
   chartWindow,
   visibility,
+  fitToContainer = false,
 }: DailyWeatherChartSvgProps) {
+    const svgRef = useRef<SVGSVGElement>(null);
+  const [fittedHeight, setFittedHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const landscape = window.matchMedia("(orientation: landscape)");
+
+    function updateHeight(width: number, height: number) {
+      if (
+        !fitToContainer ||
+        !landscape.matches ||
+        width <= 0 ||
+        height <= 0
+      ) {
+        setFittedHeight(null);
+        return;
+      }
+
+      // Match the SVG's internal aspect ratio to its displayed dimensions.
+      const nextHeight = (height / width) * WIDTH;
+
+      setFittedHeight((previous) =>
+        previous !== null && Math.abs(previous - nextHeight) < 0.1
+          ? previous
+          : nextHeight,
+      );
+    }
+
+    function measure() {
+      if (!svg) return;
+
+      const bounds = svg.getBoundingClientRect();
+      updateHeight(bounds.width, bounds.height);
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      updateHeight(entry.contentRect.width, entry.contentRect.height);
+    });
+
+    observer.observe(svg);
+    landscape.addEventListener("change", measure);
+    const frame = requestAnimationFrame(measure);
+
+    return () => {
+      observer.disconnect();
+      landscape.removeEventListener("change", measure);
+      cancelAnimationFrame(frame);
+    };
+  }, [fitToContainer]);
+
+  const HEIGHT = fitToContainer
+    ? (fittedHeight ?? DEFAULT_HEIGHT)
+    : DEFAULT_HEIGHT;
+  const bottomSpace =
+    fitToContainer && fittedHeight !== null ? 30 : 40;
+  const BOTTOM = HEIGHT - bottomSpace;
   const t = translations[locale].dailyForecast;
   const {
     daily,
@@ -104,9 +167,12 @@ export default function DailyWeatherChartSvg({
     cloudY,
   };
   return (
-    <svg
+      <svg
+      ref={svgRef}
+      data-weather-chart=""
       className={styles.chart}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={`${translations[locale].parkPage.daily}: ${formatLocalDate(
         daily.start,

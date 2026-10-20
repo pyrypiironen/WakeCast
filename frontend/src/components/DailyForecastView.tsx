@@ -28,24 +28,144 @@ export default function DailyForecastView({
 
 const [liveData, setLiveData] = useState(data);
 
-// TEMPORARY DIAGNOSTIC — remove after debugging.
-console.log("[WakeCast frontend forecast]", {
-  requestedAt: liveData.requestedAt,
-  status: liveData.forecasts.status,
-  ...(liveData.forecasts.status === "ok"
-    ? {
-        fetchedAt: liveData.forecasts.data.fetched_at,
-        totalPoints: liveData.forecasts.data.forecasts.length,
-        sources: [
-          ...new Set(
-            liveData.forecasts.data.forecasts.map((p) => p.source),
-          ),
-        ],
-        lastForecast: liveData.forecasts.data.coverage_end,
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const savedScrollPosition = useRef({ x: 0, y: 0 });
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenFailed, setFullscreenFailed] = useState(false);
+
+    async function openFullscreen() {
+        const element = fullscreenRef.current;
+        if (!element) return;
+
+        savedScrollPosition.current = {
+          x: window.scrollX,
+          y: window.scrollY,
+        };
+
+        setFullscreenFailed(false);
+
+    if (element.requestFullscreen) {
+      try {
+        await element.requestFullscreen();
+        return;
+      } catch {
+        // Use the overlay when native fullscreen is rejected.
       }
-    : {}),
-});
-// END OF TEMP
+    }
+
+    setIsFullscreen(true);
+  }
+
+    async function closeFullscreen() {
+    if (
+      fullscreenRef.current &&
+      document.fullscreenElement === fullscreenRef.current
+    ) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        setFullscreenFailed(true);
+      }
+
+      return;
+    }
+
+    setIsFullscreen(false);
+    setFullscreenFailed(false);
+
+    requestAnimationFrame(() => {
+      expandButtonRef.current?.focus({ preventScroll: true });
+    });
+  }
+
+  useEffect(() => {
+    let wasFullscreen = false;
+
+    function handleFullscreenChange() {
+      const active =
+        document.fullscreenElement === fullscreenRef.current;
+
+      setIsFullscreen(active);
+      setFullscreenFailed(false);
+
+      if (wasFullscreen && !active) {
+        expandButtonRef.current?.focus({ preventScroll: true });
+      }
+
+      wasFullscreen = active;
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isFullscreen) {
+      closeButtonRef.current?.focus({ preventScroll: true });
+    }
+  }, [isFullscreen]);
+
+    useEffect(() => {
+    if (!isFullscreen) return;
+
+    const body = document.body;
+    const { x: scrollX, y: scrollY } = savedScrollPosition.current;
+
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = `-${scrollX}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    function handleEscape(event: KeyboardEvent) {
+      if (
+        event.key === "Escape" &&
+        document.fullscreenElement !== fullscreenRef.current
+      ) {
+        event.preventDefault();
+        setIsFullscreen(false);
+
+        requestAnimationFrame(() => {
+          expandButtonRef.current?.focus({ preventScroll: true });
+        });
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.left = previous.left;
+      body.style.width = previous.width;
+      body.style.overflow = previous.overflow;
+
+      window.scrollTo({
+        left: scrollX,
+        top: scrollY,
+        behavior: "instant",
+      });
+    };
+  }, [isFullscreen]);
 
 const [nowMs, setNowMs] = useState(() => Date.parse(data.requestedAt));
 const [refreshing, setRefreshing] = useState(false);
@@ -188,10 +308,76 @@ const freshnessLabel =
   }
 
   return (
-    <div className={styles.content}>
-      <header className={styles.header}>
-        <div>
+      <div
+        ref={fullscreenRef}
+        className={`${styles.content} ${
+          isFullscreen ? styles.fullscreenView : ""
+        }`}
+      >
+        <header className={styles.header}>
+                <div className={styles.headingGroup}>
           <h2 id="daily-forecast">{parkText.daily}</h2>
+
+                    {isFullscreen ? (
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className={styles.expandButton}
+              onClick={() => void closeFullscreen()}
+              aria-label={
+                locale === "fi" ? "Sulje koko näyttö" : "Exit fullscreen"
+              }
+              title={
+                locale === "fi" ? "Sulje koko näyttö" : "Exit fullscreen"
+              }
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              ref={expandButtonRef}
+              type="button"
+              className={styles.expandButton}
+              onClick={() => void openFullscreen()}
+              aria-label={
+                locale === "fi"
+                  ? "Avaa kuvaaja koko näytölle"
+                  : "Open chart fullscreen"
+              }
+              title={
+                locale === "fi"
+                  ? "Avaa kuvaaja koko näytölle"
+                  : "Open chart fullscreen"
+              }
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5" />
+              </svg>
+            </button>
+          )}
         </div>
         <div className={styles.refreshArea}>
   <div
@@ -225,6 +411,13 @@ const freshnessLabel =
   )}
 </div>
       </header>
+      {fullscreenFailed && (
+        <p role="status">
+          {locale === "fi"
+            ? "Koko näytön tilan vaihtaminen ei onnistunut."
+            : "Could not change fullscreen mode."}
+        </p>
+      )}
 
       <div className={styles.navigation}>
         <button
@@ -298,6 +491,7 @@ const freshnessLabel =
         timeZone={timeZone}
         locale={locale}
         chartWindow={chartWindow}
+        fullscreen={isFullscreen}
       />
     </div>
   );

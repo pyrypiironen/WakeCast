@@ -16,7 +16,9 @@ import {
 } from "./daily-weather-chart-data";
 import styles from "./DailyWeatherChart.module.css";
 
-export default function DailyWeatherChart(props: DailyWeatherChartProps) {
+export default function DailyWeatherChart(
+  props: DailyWeatherChartProps & { fullscreen?: boolean },
+) {
   const { data, selectedDate, timeZone, locale, chartWindow } = props;
   const clipId = useId();
   // This component stays mounted across day/window changes and data refreshes.
@@ -26,8 +28,9 @@ export default function DailyWeatherChart(props: DailyWeatherChartProps) {
   const { sourceChanges } = chart;
 
   return (
-    <figure className={styles.figure}>
+    <figure className={styles.figure} data-weather-figure="">
       <div
+        data-weather-plot=""
         className={styles.scroll}
         role="region"
         aria-label={t.chartRegion}
@@ -40,6 +43,7 @@ export default function DailyWeatherChart(props: DailyWeatherChartProps) {
           timeZone={timeZone}
           chartWindow={chartWindow}
           visibility={visibility}
+          fitToContainer={props.fullscreen ?? false}
         />
       </div>
       <figcaption className={styles.caption}>
