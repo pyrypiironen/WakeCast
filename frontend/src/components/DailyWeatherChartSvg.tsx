@@ -24,7 +24,7 @@ interface DailyWeatherChartSvgProps extends Pick<
   fitToContainer?: boolean;
 }
 
-const WIDTH = 960;
+const WIDTH = 944;
 const DEFAULT_HEIGHT = 310;
 const LEFT = 30;
 const RIGHT = 848;
@@ -47,8 +47,10 @@ export default function DailyWeatherChartSvg({
   const [fittedHeight, setFittedHeight] = useState<number | null>(null);
 
   useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
+  if (!fitToContainer) return;
+
+  const svg = svgRef.current;
+  if (!svg) return;
 
     const landscape = window.matchMedia("(orientation: landscape)");
 

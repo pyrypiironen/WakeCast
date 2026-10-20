@@ -192,6 +192,13 @@
   transform: translateY(-6px);
 }
 
+/* Hide entry on wide screens with a mouse-style primary pointer. */
+@media (min-width: 761px) and (hover: hover) and (pointer: fine) {
+  .content:not(.fullscreenView) .expandButton {
+    display: none;
+  }
+}
+
 .expandButton:hover {
   background: transparent;
 }
@@ -273,7 +280,7 @@
     display: none;
   }
 
-    .fullscreenView .headingGroup h2,
+  .fullscreenView .headingGroup h2,
   .fullscreenView .refreshArea {
     display: none;
   }
@@ -290,14 +297,86 @@
     transform: none;
   }
 
-  .fullscreenView > .navigation {
-    padding-right: 52px;
-  }
-
   .content.fullscreenView {
     padding-top: max(4px, env(safe-area-inset-top, 0px));
     padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
     gap: 4px;
+  }
+}
+
+.fullscreenView .dayButton,
+.fullscreenView .windowButton {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.fullscreenView > .navigation {
+  padding-left: 25px;
+  padding-right: 64px;
+}
+
+.fullscreenView .chartWindowSwitch {
+  padding-right: 35;
+}
+
+@media (orientation: landscape) {
+  .fullscreenView > .header {
+    top: env(safe-area-inset-top, 0px);
+    right: calc(16px + env(safe-area-inset-right, 0px));
+  }
+
+  .fullscreenView .expandButton {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Hide legends and information below the graph in all fullscreen views. */
+.fullscreenView figcaption {
+  display: none;
+}
+
+.fullscreenView .headingGroup h2,
+  .fullscreenView .refreshArea {
+    display: none;
+  }
+
+@media (orientation: portrait) and (max-width: 760px) {
+  .fullscreenView > .header {
+    position: relative;
+    height: 0;
+    margin: 0;
+    z-index: 2;
+  }
+
+  .fullscreenView .expandButton {
+    position: absolute;
+    top: 0;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    transform: none;
+  }
+
+  .fullscreenView > .navigation {
+    padding-right: 12px;
+  }
+
+  .fullscreenView .date {
+    box-sizing: border-box;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    padding-right: 44px;
+  }
+
+  .fullscreenView > .header + .navigation {
+    margin-top: -1rem;
   }
 }
 

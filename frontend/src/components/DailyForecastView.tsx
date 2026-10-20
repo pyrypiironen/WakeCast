@@ -32,6 +32,7 @@ const [liveData, setLiveData] = useState(data);
   const savedScrollPosition = useRef({ x: 0, y: 0 });
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const wasFullscreenRef = useRef(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenFailed, setFullscreenFailed] = useState(false);
@@ -76,43 +77,37 @@ const [liveData, setLiveData] = useState(data);
     setIsFullscreen(false);
     setFullscreenFailed(false);
 
-    requestAnimationFrame(() => {
-      expandButtonRef.current?.focus({ preventScroll: true });
-    });
   }
 
   useEffect(() => {
-    let wasFullscreen = false;
+  function handleFullscreenChange() {
+    const element = fullscreenRef.current;
 
-    function handleFullscreenChange() {
-      const active =
-        document.fullscreenElement === fullscreenRef.current;
+    setIsFullscreen(
+      element !== null && document.fullscreenElement === element,
+    );
+    setFullscreenFailed(false);
+  }
 
-      setIsFullscreen(active);
-      setFullscreenFailed(false);
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
 
-      if (wasFullscreen && !active) {
-        expandButtonRef.current?.focus({ preventScroll: true });
-      }
-
-      wasFullscreen = active;
-    }
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener(
-        "fullscreenchange",
-        handleFullscreenChange,
-      );
-    };
-  }, []);
+  return () => {
+    document.removeEventListener(
+      "fullscreenchange",
+      handleFullscreenChange,
+    );
+  };
+}, []);
 
   useEffect(() => {
-    if (isFullscreen) {
-      closeButtonRef.current?.focus({ preventScroll: true });
-    }
-  }, [isFullscreen]);
+  if (isFullscreen) {
+    closeButtonRef.current?.focus({ preventScroll: true });
+  } else if (wasFullscreenRef.current) {
+    expandButtonRef.current?.focus({ preventScroll: true });
+  }
+
+  wasFullscreenRef.current = isFullscreen;
+}, [isFullscreen]);
 
     useEffect(() => {
     if (!isFullscreen) return;
@@ -141,10 +136,6 @@ const [liveData, setLiveData] = useState(data);
       ) {
         event.preventDefault();
         setIsFullscreen(false);
-
-        requestAnimationFrame(() => {
-          expandButtonRef.current?.focus({ preventScroll: true });
-        });
       }
     }
 
@@ -165,7 +156,105 @@ const [liveData, setLiveData] = useState(data);
         behavior: "instant",
       });
     };
-  }, [isFullscreen]);
+    }, [isFullscreen]);
+
+useEffect(() => {
+  const container = fullscreenRef.current;
+  if (!isFullscreen || !container) return;
+
+  // Disable background branches without disabling the chart's ancestors.
+  const background: Array<{
+    element: Element;
+    previousInert: string | null;
+  }> = [];
+
+  let branch: Element = container;
+
+  while (branch.parentElement) {
+    const parent = branch.parentElement;
+
+    for (const sibling of Array.from(parent.children)) {
+      if (sibling === branch) continue;
+
+      background.push({
+        element: sibling,
+        previousInert: sibling.getAttribute("inert"),
+      });
+
+      sibling.setAttribute("inert", "");
+    }
+
+    if (parent === document.body) break;
+    branch = parent;
+  }
+
+  function getFocusableElements() {
+    return Array.from(
+      container!.querySelectorAll<HTMLElement>(
+        'button, a[href], input, select, textarea, [tabindex]',
+      ),
+    ).filter(
+      (element) =>
+        element.tabIndex >= 0 &&
+        !element.matches(":disabled") &&
+        !element.closest("[inert]") &&
+        element.getClientRects().length > 0 &&
+        window.getComputedStyle(element).visibility === "visible",
+    );
+  }
+
+  function handleTab(event: KeyboardEvent) {
+    if (event.key !== "Tab") return;
+
+    const elements = getFocusableElements();
+    const first = elements[0];
+    const last = elements[elements.length - 1];
+
+    if (!first || !last) {
+      event.preventDefault();
+      container!.focus({ preventScroll: true });
+      return;
+    }
+
+    const active = document.activeElement;
+    const isInside = active !== null && container!.contains(active);
+
+    if (event.shiftKey && (active === first || active === container || !isInside)) {
+      event.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!event.shiftKey && (active === last || !isInside)) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  }
+
+  function handleFocus(event: FocusEvent) {
+    if (
+      event.target instanceof Node &&
+      !container!.contains(event.target)
+    ) {
+      (closeButtonRef.current ?? container!).focus({
+        preventScroll: true,
+      });
+    }
+  }
+
+  document.addEventListener("keydown", handleTab);
+  document.addEventListener("focusin", handleFocus);
+
+  return () => {
+    document.removeEventListener("keydown", handleTab);
+    document.removeEventListener("focusin", handleFocus);
+
+    for (const { element, previousInert } of background) {
+      if (previousInert === null) {
+        element.removeAttribute("inert");
+      } else {
+        element.setAttribute("inert", previousInert);
+      }
+    }
+  };
+}, [isFullscreen]);
 
 const [nowMs, setNowMs] = useState(() => Date.parse(data.requestedAt));
 const [refreshing, setRefreshing] = useState(false);
@@ -310,6 +399,16 @@ const freshnessLabel =
   return (
       <div
         ref={fullscreenRef}
+        role={isFullscreen ? "dialog" : undefined}
+        aria-modal={isFullscreen ? true : undefined}
+        aria-label={
+          isFullscreen
+            ? locale === "fi"
+              ? "Sääkuvaaja koko näytöllä"
+              : "Fullscreen weather chart"
+            : undefined
+        }
+        tabIndex={isFullscreen ? -1 : undefined}
         className={`${styles.content} ${
           isFullscreen ? styles.fullscreenView : ""
         }`}
