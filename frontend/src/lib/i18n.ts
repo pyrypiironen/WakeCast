@@ -72,7 +72,7 @@ export const translations = {
   "Precipitation probability is forecast-only. – means unavailable, not 0%.",
     },
     parkPage: {
-      back: "Back to wakeparks",
+      back: "Front page",
       information: "Park information",
       waterType: "Water",
       sea: "Sea",
@@ -158,7 +158,7 @@ export const translations = {
       probabilityNote: "Sateen todennäköisyys on vain ennuste. – tarkoittaa puuttuvaa tietoa, ei 0 %.",
     },
     parkPage: {
-      back: "Takaisin wakeparkkeihin",
+      back: "Etusivulle",
       information: "Puiston tiedot",
       waterType: "Vesistö",
       sea: "Meri",

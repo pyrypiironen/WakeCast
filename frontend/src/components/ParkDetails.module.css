@@ -34,8 +34,8 @@
 }
 
 .page h2 {
-  font-size: 1.125rem;
-  font-weight: 650;
+  font-size: 25px;
+  font-weight: 600;
   line-height: 1.4;
   margin-bottom: 0.75rem;
 }
@@ -119,4 +119,10 @@
   .placeholder:last-child {
     grid-column: 1 / -1;
   }
+}
+
+.placeholder {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
