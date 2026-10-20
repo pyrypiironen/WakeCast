@@ -31,6 +31,7 @@ from app.services.weather_storage import (
     get_latest_forecast_snapshot,
     get_recent_ecmwf_fallback,
     is_forecast_snapshot_fresh,
+    get_recent_fmi_current_hour_fallback,
 )
 
 logger = logging.getLogger(__name__)
@@ -133,14 +134,39 @@ def get_park_weather(
 
     upcoming_rows = [row for row in rows if row.timestamp >= current_hour_start]
 
+    # Reuse a recent FMI forecast if the latest snapshot
+    # does not contain FMI data for the current hour.
+    fmi_fallback = get_recent_fmi_current_hour_fallback(
+        db=db,
+        park_id=park.id,
+        now=now,
+        current_snapshot_rows=upcoming_rows,
+    )
+
+    if fmi_fallback is not None:
+        upcoming_rows.append(fmi_fallback)
+
+        logger.info(
+            "Using recent FMI fallback: park=%s, hour=%s, "
+            "original_fetched_at=%s, age=%s",
+            park.slug,
+            fmi_fallback.timestamp.isoformat(),
+            fmi_fallback.fetched_at.isoformat(),
+            now - fmi_fallback.fetched_at,
+    )
+
     # Use historical ECMWF data only when the latest snapshot has no
     # upcoming ECMWF points. Keep the original database rows unchanged.
     if not any(row.source == "ecmwf" for row in upcoming_rows):
-        fallback_rows = get_recent_ecmwf_fallback(
-            db=db,
-            park_id=park.id,
-            now=now,
-        )
+
+    # Use historical ECMWF data only when the latest snapshot has no
+    # upcoming ECMWF points. Keep the original database rows unchanged.
+        if not any(row.source == "ecmwf" for row in upcoming_rows):
+            fallback_rows = get_recent_ecmwf_fallback(
+              db=db,
+             park_id=park.id,
+             now=now,
+            )
         upcoming_rows.extend(fallback_rows)
 
     if not upcoming_rows:

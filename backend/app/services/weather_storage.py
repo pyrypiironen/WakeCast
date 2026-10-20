@@ -143,6 +143,45 @@ def get_latest_forecast_snapshot(
     )
 
 
+FMI_CURRENT_HOUR_FALLBACK_MAX_AGE = timedelta(minutes=40)
+def get_recent_fmi_current_hour_fallback(
+    db: Session,
+    park_id: int,
+    *,
+    now: datetime,
+    current_snapshot_rows: list[WeatherForecastDB],
+) -> WeatherForecastDB | None:
+    """Reuse a recent FMI forecast if the latest snapshot lacks this hour."""
+
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    fmi_sources = ("fmi_edited", "harmonie")
+
+    # Never replace FMI data from the latest snapshot.
+    if any(
+        row.timestamp == current_hour and row.source in fmi_sources
+        for row in current_snapshot_rows
+    ):
+        return None
+
+    return (
+        db.query(WeatherForecastDB)
+        .filter(
+            WeatherForecastDB.park_id == park_id,
+            WeatherForecastDB.timestamp == current_hour,
+            WeatherForecastDB.source.in_(fmi_sources),
+            WeatherForecastDB.fetched_at
+            >= now - FMI_CURRENT_HOUR_FALLBACK_MAX_AGE,
+            WeatherForecastDB.fetched_at <= now,
+        )
+        .order_by(
+            WeatherForecastDB.fetched_at.desc(),
+            WeatherForecastDB.id.desc(),
+        )
+        .first()
+    )
+
+
+
 def get_recent_ecmwf_fallback(
     db: Session,
     park_id: int,

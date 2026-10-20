@@ -62,6 +62,7 @@ export default function DailyWeatherChart(props: DailyWeatherChartProps) {
           selectedDate={selectedDate}
           timeZone={timeZone}
           locale={locale}
+          chart={chart}
         />
 
         {sourceChanges.map((gap, index) => (

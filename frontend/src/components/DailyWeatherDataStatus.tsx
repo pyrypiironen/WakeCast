@@ -5,12 +5,19 @@ import type {
 } from "@/lib/daily-weather";
 import type { Locale } from "@/lib/i18n";
 import { measurementNotices } from "@/lib/weather-data-notices";
+import {
+  getMissingPrecipitationProbabilityRanges,
+} from "@/lib/precipitation-probability";
+import type {
+  PreparedDailyWeatherChart,
+} from "./daily-weather-chart-data";
 
 interface Props {
   data: DailyWeatherData;
   selectedDate: string;
   timeZone: string;
   locale: Locale;
+  chart: PreparedDailyWeatherChart;
 }
 
 const messages = {
@@ -25,6 +32,7 @@ const messages = {
     forecastError: "Weather forecasts could not be loaded.",
     forecastUnavailable: "Weather forecasts are unavailable.",
     forecastEmpty: "No forecasts available for the remaining hours of this day.",
+    probabilityMissing: "Rain probability unavailable",
   },
   fi: {
     title: "Tietojen saatavuus",
@@ -37,6 +45,7 @@ const messages = {
     forecastError: "Sääennusteita ei voitu ladata.",
     forecastUnavailable: "Sääennusteita ei ole saatavilla.",
     forecastEmpty: "Tämän päivän jäljellä oleville tunneille ei ole ennusteita.",
+    probabilityMissing: "Sateen todennäköisyystieto puuttuu klo",
   },
 } as const;
 
@@ -45,6 +54,7 @@ export default function DailyWeatherDataStatus({
   selectedDate,
   timeZone,
   locale,
+  chart,
 }: Props) {
   const t = messages[locale];
   const { start, end } = localDayRange(selectedDate, timeZone);
@@ -127,6 +137,50 @@ export default function DailyWeatherDataStatus({
       t.forecastUnavailable,
       t.forecastEmpty,
     );
+  }
+
+  // Warn about missing rain probability during expected FMI coverage.
+  if (data.forecasts.status === "ok" && endMs > referenceMs) {
+    const missingRanges =
+      getMissingPrecipitationProbabilityRanges(
+        data.forecasts.data.forecasts,
+        chart.precipitationCells,
+        referenceMs,
+      );
+
+    if (missingRanges.length > 0) {
+      const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+        timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      });
+
+      function formatHour(ms: number): string {
+        if (ms === endMs) {
+          return locale === "fi" ? "24.00" : "24:00";
+        }
+
+        const formatted = timeFormatter.format(new Date(ms));
+
+        return locale === "fi"
+          ? formatted.replace(":", ".")
+          : formatted;
+      }
+
+      const intervals = missingRanges
+        .map(
+          ({ startMs, endMs }) =>
+            `${formatHour(startMs)}–${formatHour(endMs)}`,
+        )
+        .join(", ");
+
+      notices.push(
+        locale === "fi"
+          ? `${t.probabilityMissing} ${intervals}.`
+          : `${t.probabilityMissing}: ${intervals}.`,
+      );
+    }
   }
 
     notices.push(

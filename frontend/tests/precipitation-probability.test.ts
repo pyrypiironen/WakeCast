@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { localDayRange } from "../src/lib/date";
-import { buildPrecipitationProbabilityCells } from "../src/lib/precipitation-probability";
+import {
+  buildPrecipitationProbabilityCells,
+  getMissingPrecipitationProbabilityRanges,
+} from "../src/lib/precipitation-probability";
+
 
 const HOUR = 3_600_000;
 
@@ -259,5 +263,145 @@ test("HARMONIE forecasts support precipitation probability", () => {
   assert.deepEqual(
     cells.map((cell) => cell.probability),
     [65],
+  );
+});
+
+
+test("missing current-hour PoP before FMI coverage", () => {
+  const hour = Date.parse("2026-10-19T18:00:00Z");
+
+  const forecasts = [
+    {
+      timestamp: new Date(hour).toISOString(),
+      precipitation_probability: null,
+      source: "ecmwf" as const,
+    },
+    {
+      timestamp: new Date(hour + HOUR).toISOString(),
+      precipitation_probability: 0,
+      source: "fmi_edited" as const,
+    },
+    {
+      timestamp: new Date(hour + 2 * HOUR).toISOString(),
+      precipitation_probability: 20,
+      source: "fmi_edited" as const,
+    },
+  ];
+
+  const referenceMs = hour + 30 * 60_000;
+
+  const cells = buildPrecipitationProbabilityCells(
+    forecasts,
+    hour,
+    hour + 3 * HOUR,
+    referenceMs,
+  );
+
+  assert.deepEqual(
+    getMissingPrecipitationProbabilityRanges(
+      forecasts,
+      cells,
+      referenceMs,
+    ),
+    [{ startMs: hour, endMs: hour + HOUR }],
+  );
+});
+
+test("temporary ECMWF gap preserves later FMI probabilities", () => {
+  const hour = Date.parse("2026-10-19T17:00:00Z");
+
+  const forecasts = [
+    {
+      timestamp: new Date(hour).toISOString(),
+      precipitation_probability: 10,
+      source: "fmi_edited" as const,
+    },
+    {
+      timestamp: new Date(hour + HOUR).toISOString(),
+      precipitation_probability: null,
+      source: "ecmwf" as const,
+    },
+    {
+      timestamp: new Date(hour + 2 * HOUR).toISOString(),
+      precipitation_probability: 20,
+      source: "fmi_edited" as const,
+    },
+    {
+      timestamp: new Date(hour + 3 * HOUR).toISOString(),
+      precipitation_probability: null,
+      source: "fmi_edited" as const,
+    },
+    {
+      timestamp: new Date(hour + 4 * HOUR).toISOString(),
+      precipitation_probability: null,
+      source: "ecmwf" as const,
+    },
+  ];
+
+  const referenceMs = hour + 10 * 60_000;
+
+  const cells = buildPrecipitationProbabilityCells(
+    forecasts,
+    hour,
+    hour + 5 * HOUR,
+    referenceMs,
+  );
+
+  assert.deepEqual(
+    cells.map((cell) => cell.probability),
+    [10, null, 20, null],
+  );
+
+  assert.deepEqual(
+    getMissingPrecipitationProbabilityRanges(
+      forecasts,
+      cells,
+      referenceMs,
+    ),
+    [
+      {
+        startMs: hour + HOUR,
+        endMs: hour + 2 * HOUR,
+      },
+      {
+        startMs: hour + 3 * HOUR,
+        endMs: hour + 4 * HOUR,
+      },
+    ],
+  );
+});
+
+test("completed hours do not generate missing PoP notices", () => {
+  const hour = Date.parse("2026-10-19T18:00:00Z");
+
+  const forecasts = [
+    {
+      timestamp: new Date(hour).toISOString(),
+      precipitation_probability: null,
+      source: "fmi_edited" as const,
+    },
+    {
+      timestamp: new Date(hour + HOUR).toISOString(),
+      precipitation_probability: 0,
+      source: "fmi_edited" as const,
+    },
+  ];
+
+  const referenceMs = hour + HOUR;
+
+  const cells = buildPrecipitationProbabilityCells(
+    forecasts,
+    hour,
+    hour + 2 * HOUR,
+    referenceMs,
+  );
+
+  assert.deepEqual(
+    getMissingPrecipitationProbabilityRanges(
+      forecasts,
+      cells,
+      referenceMs,
+    ),
+    [],
   );
 });
