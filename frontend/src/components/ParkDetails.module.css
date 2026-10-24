@@ -116,3 +116,10 @@
   border-color: transparent;
   box-shadow: none;
 }
+
+@media (max-width: 500px) {
+  .placeholder {
+    padding-inline: 0;
+    border-inline-width: 0;
+  }
+}

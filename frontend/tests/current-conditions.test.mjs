@@ -961,3 +961,262 @@ test("Current availability accepts the latest completed rainfall hour despite ne
     ).textContent.includes("18:00–19:00"),
   );
 });
+
+test("weather and rainfall warnings appear only after the one-hour threshold", async () => {
+  const input = props();
+  const sampleTime = Date.parse(
+    input.data.observations.data.observations[0].timestamp,
+  );
+
+  const noticesFor = (key) => {
+    const label = translations.en.currentConditions[key];
+
+    return [
+      ...document.querySelectorAll("[data-current-availability] li"),
+    ].filter((notice) => notice.textContent.startsWith(`${label}:`));
+  };
+
+  await render({
+    ...input,
+    nowMs: sampleTime + 60 * 60_000,
+  });
+
+  assert.equal(noticesFor("temperature").length, 0);
+  assert.equal(noticesFor("rain").length, 0);
+
+  await render({
+    ...input,
+    nowMs: sampleTime + 60 * 60_000 + 1,
+  });
+
+  assert.equal(noticesFor("temperature").length, 1);
+  assert.ok(
+    noticesFor("temperature")[0].textContent.includes(
+      "Updates are delayed.",
+    ),
+  );
+
+  assert.equal(noticesFor("rain").length, 1);
+  assert.ok(
+    noticesFor("rain")[0].textContent.includes("18:00–19:00"),
+  );
+});
+
+test("water warning appears only after two hours and clears with a newer measurement", async () => {
+  const input = props();
+  const sampleTime = Date.parse(
+    input.data.water.data.observations[0].timestamp,
+  );
+
+  const waterNotices = () => {
+    const label = translations.en.currentConditions.water;
+
+    return [
+      ...document.querySelectorAll("[data-current-availability] li"),
+    ].filter((notice) => notice.textContent.startsWith(`${label}:`));
+  };
+
+  await render({
+    ...input,
+    nowMs: sampleTime + 2 * 60 * 60_000,
+  });
+
+  assert.equal(waterNotices().length, 0);
+
+  const nowMs = sampleTime + 2 * 60 * 60_000 + 1;
+
+  await render({ ...input, nowMs });
+
+  assert.equal(waterNotices().length, 1);
+  assert.ok(
+    waterNotices()[0].textContent.includes("Updates are delayed."),
+  );
+
+  const refreshed = fixture();
+  refreshed.water.data.observations.push({
+    ...refreshed.water.data.observations[0],
+    timestamp: new Date(nowMs - 60_000).toISOString(),
+    fetched_at: new Date(nowMs).toISOString(),
+    water_temperature: 9.7,
+  });
+
+  await render({ ...input, nowMs, data: refreshed });
+
+  assert.equal(waterNotices().length, 0);
+  assert.equal(observedValue("water"), "9.7 °C *");
+});
+
+test("forecast freshness warning appears after thirty minutes and clears after retrieval", async () => {
+  const input = props();
+  const fetchedAt = Date.parse(input.data.forecasts.data.fetched_at);
+
+  const forecastDelayNotices = () => [
+    ...document.querySelectorAll("[data-current-availability] li"),
+  ].filter((notice) =>
+    notice.textContent.startsWith("Forecast updates are delayed."),
+  );
+
+  await render({
+    ...input,
+    nowMs: fetchedAt + 30 * 60_000,
+  });
+
+  assert.equal(forecastDelayNotices().length, 0);
+
+  const nowMs = fetchedAt + 30 * 60_000 + 1;
+
+  await render({ ...input, nowMs });
+
+  assert.equal(forecastDelayNotices().length, 1);
+
+  const refreshed = fixture();
+  refreshed.forecasts.data.fetched_at = new Date(nowMs).toISOString();
+
+  await render({ ...input, nowMs, data: refreshed });
+
+  assert.equal(forecastDelayNotices().length, 0);
+});
+
+test("an older cloudiness reading is identified accurately and its warning clears after recovery", async () => {
+  const input = props();
+
+  input.data.observations.data.observations.push({
+    ...input.data.observations.data.observations[0],
+    timestamp: "2026-10-19T19:10:00+03:00",
+    cloudiness: null,
+  });
+
+  const cloudNotices = () => {
+    const label = translations.en.currentConditions.cloud;
+
+    return [
+      ...document.querySelectorAll("[data-current-availability] li"),
+    ].filter((notice) => notice.textContent.startsWith(`${label}:`));
+  };
+
+  await render(input);
+
+  // Keep the actual older value, with an accurate explanation.
+  assert.equal(observedValue("cloud"), "75 %");
+  assert.equal(cloudNotices().length, 1);
+  assert.ok(
+    cloudNotices()[0].textContent.includes("Newer readings are missing."),
+  );
+  assert.ok(
+    !cloudNotices()[0].textContent.includes("Observation unavailable."),
+  );
+
+  const refreshed = fixture();
+  refreshed.observations.data.observations.push({
+    ...refreshed.observations.data.observations[0],
+    timestamp: "2026-10-19T19:10:00+03:00",
+    cloudiness: 0,
+  });
+
+  await render({ ...input, data: refreshed });
+
+  // Zero cloudiness is valid and clears the warning.
+  assert.equal(observedValue("cloud"), "0 %");
+  assert.equal(cloudNotices().length, 0);
+});
+
+test("availability follows the current forecast hour and clears when that hour arrives in refreshed data", async () => {
+  const input = props();
+
+  // Initially only the 19:00 forecast is available.
+  input.data.forecasts.data.forecasts =
+    input.data.forecasts.data.forecasts.slice(0, 1);
+
+  await render(input);
+
+  assert.equal(forecastValue("probability"), "20 %");
+  assert.equal(
+    document.querySelector("thead time").textContent,
+    "19:00–20:00",
+  );
+  assert.equal(
+    document.querySelector("[data-current-availability]"),
+    null,
+  );
+
+  const nowMs = Date.parse("2026-10-19T20:00:00+03:00");
+
+  await render({ ...input, nowMs });
+
+  // The previous hour must not be reused as the current forecast.
+  assert.equal(forecastValue("temperature"), "—");
+  assert.equal(forecastValue("probability"), "—");
+  assert.equal(document.querySelector("thead time"), null);
+
+  const notices = [
+    ...document.querySelectorAll("[data-current-availability] li"),
+  ].map((notice) => notice.textContent);
+
+  assert.deepEqual(notices, [
+    "The current-hour forecast is unavailable.",
+  ]);
+
+  const refreshed = fixture();
+  refreshed.forecasts.data.fetched_at =
+    "2026-10-19T20:00:00+03:00";
+
+  await render({ ...input, nowMs, data: refreshed });
+
+  assert.equal(forecastValue("probability"), "40 %");
+  assert.equal(
+    document.querySelector("thead time").textContent,
+    "20:00–21:00",
+  );
+  assert.equal(
+    document.querySelector("[data-current-availability]"),
+    null,
+  );
+});
+
+test("new weather measurements clear missing-value warnings and update the observation timestamp", async () => {
+  const input = props();
+  input.data.observations.data.observations[0].temperature = null;
+
+  await render(input);
+
+  assert.equal(observedValue("temperature"), "—");
+
+  const notices = [
+    ...document.querySelectorAll("[data-current-availability] li"),
+  ].map((notice) => notice.textContent);
+
+  assert.deepEqual(notices, [
+    `${translations.en.currentConditions.temperature}: Observation unavailable.`,
+  ]);
+
+  const sources = document.querySelector("[data-current-sources]");
+  await act(() => sources.querySelector("summary").click());
+  assert.equal(sources.open, true);
+
+  const refreshed = fixture();
+  refreshed.observations.data.observations.push({
+    ...refreshed.observations.data.observations[0],
+    timestamp: "2026-10-19T19:10:00+03:00",
+    fetched_at: "2026-10-19T19:17:00+03:00",
+    temperature: 7.5,
+  });
+
+  await render({ ...input, data: refreshed });
+
+  assert.equal(observedValue("temperature"), "7.5 °C");
+  assert.equal(
+    document.querySelector("[data-observation-range]").textContent,
+    "19:10",
+  );
+  assert.equal(
+    document.querySelector("[data-current-availability]"),
+    null,
+  );
+
+  // Refresh preserves the existing source disclosure and its open state.
+  assert.equal(
+    document.querySelector("[data-current-sources]"),
+    sources,
+  );
+  assert.equal(sources.open, true);
+});

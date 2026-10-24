@@ -47,9 +47,14 @@
   white-space: nowrap;
 }
 
-@media (min-width: 48rem) {
-  .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .windSlot { display: block; }
+@media (min-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .windSlot {
+    display: block;
+  }
 }
 
 .detailsTable {
@@ -93,7 +98,7 @@
 }
 
 /* Compact sizing for narrow phones, including 390px screens. */
-@media (max-width: 420px) {
+@media (max-width: 1000px) {
   .detailsTable {
     font-size: 0.75rem;
     line-height: 1.35;
@@ -180,7 +185,8 @@
   font-weight: 600;
 }
 
-@media (max-width: 420px) {
+/* Compact sizing below 1000px. */
+@media (max-width: 1000px) {
   .waterSourceNote,
   .sourceDetails {
     font-size: 0.75rem;
@@ -225,4 +231,11 @@
 .availabilityList {
   margin: 0.25rem 0 0;
   padding-inline-start: 1.25rem;
+}
+
+@media (500px < width < 1000px) {
+  .layout > div:first-child {
+    width: 100%;
+    max-width: 500px;
+  }
 }

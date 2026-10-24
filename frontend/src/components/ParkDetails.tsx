@@ -27,10 +27,6 @@ export default function ParkDetails({
           timeZone={park.timezone}
           includeCurrentConditions
         />
-        <section className={styles.placeholder} aria-labelledby="detailed-weather">
-          <h2 id="detailed-weather">{t.detailed}</h2>
-          <p>{t.comingSoon}</p>
-        </section>
       </div>
     </article>
   );

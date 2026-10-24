@@ -241,7 +241,7 @@ export const translations = {
       noCables: "Tämän puiston kaapelitietoja ei ole saatavilla.",
       inactive:
         "Puisto on merkitty epäaktiiviseksi. Tarkista ajantasainen saatavuus puiston verkkosivuilta.",
-      current: "Nykyiset olosuhteet",
+      current: "Olosuhteet nyt",
       daily: "Päivän sää",
       weekly: "Viikkoennuste",
       detailed: "Tarkat säätiedot",
