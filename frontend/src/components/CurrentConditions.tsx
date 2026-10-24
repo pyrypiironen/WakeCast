@@ -2,12 +2,21 @@
 
 import { useId, useMemo, useState } from "react";
 import type { DailyWeatherData } from "@/lib/daily-weather";
-import { formatCurrentInterval, prepareCurrentConditions, type CurrentReading } from "@/lib/current-conditions";
-import { formatLocalDate, formatLocalTime } from "@/lib/date";
+import {
+  prepareCurrentConditions,
+  type CurrentReading,
+} from "@/lib/current-conditions";
+import { formatLocalDate } from "@/lib/date";
+import {
+  formatCurrentConditionsTime as formatLocalTime,
+  formatCurrentConditionsInterval as formatCurrentInterval,
+} from "@/lib/current-conditions-time";
 import { formatPercentage, formatPrecipitation, formatTemperature, formatWindSpeed } from "@/lib/format";
 import { translations, type Locale } from "@/lib/i18n";
+import { weatherStationDisplayName } from "@/lib/station-display-name";
 import forecastStyles from "./DailyForecast.module.css";
-import styles from "./CurrentConditions.module.css";
+import styles from "./CurrentConditions.module.css"
+import CurrentConditionsSources from "./CurrentConditionsSources";
 
 interface CurrentConditionsProps {
   data: DailyWeatherData;
@@ -20,11 +29,12 @@ interface CurrentConditionsProps {
 export default function CurrentConditions({ data, nowMs, locale, timeZone, refreshFailed = false }: CurrentConditionsProps) {
   const [view, setView] = useState<"simple" | "detailed">("simple");
   const panelId = useId();
+  const waterSourceNoteId = useId();
   const t = translations[locale].currentConditions;
   const current = useMemo(() => prepareCurrentConditions(data, new Date(nowMs), timeZone), [data, nowMs, timeZone]);
     const weatherStation =
     data.observations.status === "ok"
-      ? data.observations.data.station_name.trim() || t.unavailable
+      ? weatherStationDisplayName(data.observations.data) || t.unavailable
       : t.unavailable;
 
   const waterStation =
@@ -52,6 +62,42 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
           locale,
         )
       : t.unavailable;
+    const observationTimes = [
+    current.temperature,
+    current.wind,
+    current.gust,
+    current.cloud,
+  ]
+    .flatMap((reading) =>
+      reading.value !== null && reading.timestamp
+        ? [Date.parse(reading.timestamp)]
+        : [],
+    )
+    .filter((timestamp) => Number.isFinite(timestamp));
+
+  const firstObservationTime =
+    observationTimes.length > 0 ? Math.min(...observationTimes) : null;
+
+  const lastObservationTime =
+    observationTimes.length > 0 ? Math.max(...observationTimes) : null;
+
+  const observationTimeLabel =
+    firstObservationTime === null || lastObservationTime === null
+      ? "—"
+      : firstObservationTime === lastObservationTime
+        ? formatLocalTime(
+            new Date(firstObservationTime),
+            timeZone,
+            locale,
+          )
+        : formatCurrentInterval(
+            {
+              start: firstObservationTime,
+              end: lastObservationTime,
+            },
+            timeZone,
+            locale,
+          );
   const rows = [
     { key: "temperature", icon: "🌡️", format: formatTemperature },
     { key: "water", icon: "🌊", format: formatTemperature },
@@ -96,15 +142,20 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
 
               <thead>
                 <tr>
-                  <th scope="col">{t.measurement}</th>
+                  <th scope="col">
+                    <span className={styles.srOnly}>{t.measurement}</span>
+                  </th>
 
                   <th scope="col">
                     {t.observations}
                     <span className={styles.columnMeta}>
                       {weatherStation}
                     </span>
-                    <span className={styles.columnMeta}>
-                      *{waterStation}
+                    <span
+                      className={styles.columnMeta}
+                      data-observation-range=""
+                    >
+                      {observationTimeLabel}
                     </span>
                   </th>
 
@@ -117,7 +168,13 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
                       {forecastLocation}
                     </span>
                     <span className={styles.columnMeta}>
-                      {forecastInterval}
+                      {current.forecast ? (
+                        <time dateTime={current.forecast.timestamp}>
+                          {forecastInterval}
+                        </time>
+                      ) : (
+                        forecastInterval
+                      )}
                     </span>
                   </th>
                 </tr>
@@ -172,9 +229,16 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
                           key === "probability" ? undefined : provenance
                         }
                       >
-                        <span className={styles.measurementValue}>
-                          {format(observationValue, locale)}
-                          {showWaterAsterisk && "*"}
+                        <span
+                          className={styles.measurementValue}
+                          aria-describedby={
+                            showWaterAsterisk ? waterSourceNoteId : undefined
+                          }
+                        >
+                          {key === "probability"
+                            ? null
+                            : format(observationValue, locale)}
+                          {showWaterAsterisk && " *"}
                         </span>
                         {key !== "probability" && (
                           <span className={styles.srOnly}>
@@ -191,7 +255,9 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
                         }
                       >
                         <span className={styles.measurementValue}>
-                          {format(forecastValue, locale)}
+                          {key === "water" || key === "rain"
+                            ? null
+                            : format(forecastValue, locale)}
                         </span>
                           {key !== "water" && key !== "rain" && (
                           <span className={styles.srOnly}>
@@ -229,8 +295,22 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
                   </div>
                 );
               })}
-            </dl>
+                      </dl>
           )}
+
+          {view === "detailed" && (
+          <p id={waterSourceNoteId} className={styles.waterSourceNote}>
+              * {waterStation}
+            </p>
+          )}
+
+          <CurrentConditionsSources
+            key="current-sources"
+            current={current}
+            nowMs={nowMs}
+            locale={locale}
+            timeZone={timeZone}
+          />
         </div>
         {/* Reserved for the wind-direction visualization; no invented bearing or new chart. */}
         <div className={styles.windSlot} aria-hidden="true" />

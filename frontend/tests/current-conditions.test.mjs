@@ -87,7 +87,13 @@ test("Simple defaults to seven ordered bilingual rows, aligned value cells and h
     assert.ok(row("temperature").textContent.includes("Helsinki Kaisaniemi"));
     assert.equal(row("water").querySelector("time").dateTime, "2026-10-19T18:32:00+03:00");
     assert.ok(row("water").querySelector("dd").title.includes("Lauttasaaren mattolaituri"));
-    assert.equal(document.querySelectorAll("details").length, 0);
+    const sources = document.querySelector("details[data-current-sources]");
+    assert.ok(sources);
+    assert.equal(sources.open, false);
+    assert.equal(
+      sources.querySelector("summary").textContent,
+      t.dataSources,
+    );
     buttons()[0].focus();
     assert.equal(document.activeElement, buttons()[0]);
   }
@@ -187,6 +193,7 @@ test("Detailed headings use API locations and the actual current forecast interv
 
     // Different fixture names ensure the component cannot hardcode stations.
     input.data.observations.data.station_name = "Weather station A";
+    input.data.observations.data.source_station_id = 999999;
     input.data.water.data.observation_location = "Water station B";
     input.data.forecasts.data.forecast_location = "Forecast location C";
 
@@ -198,7 +205,7 @@ test("Detailed headings use API locations and the actual current forecast interv
     ];
 
     assert.ok(headings()[1].textContent.includes("Weather station A"));
-    assert.ok(headings()[1].textContent.includes("*Water station B"));
+    assert.ok(!headings()[1].textContent.includes("*Water station B"));
     assert.ok(headings()[2].textContent.includes("Forecast location C"));
     assert.ok(headings()[2].textContent.includes("19:00–20:00"));
 
@@ -265,8 +272,8 @@ test("Detailed displays seven localized rows with water marked by an asterisk", 
     );
 
     const expected = locale === "fi"
-      ? ["8,4 °C", "9,8 °C*", "3,2 m/s", "5,6 m/s", "75 %", "0,4 mm", "—"]
-      : ["8.4 °C", "9.8 °C*", "3.2 m/s", "5.6 m/s", "75 %", "0.4 mm", "—"];
+      ? ["8,4 °C", "9,8 °C *", "3,2 m/s", "5,6 m/s", "75 %", "0,4 mm", ""]
+      : ["8.4 °C", "9.8 °C *", "3.2 m/s", "5.6 m/s", "75 %", "0.4 mm", ""];
 
     assert.deepEqual(
       rows.map((row) => row.querySelector("td > span").textContent),
@@ -310,7 +317,7 @@ test("Detailed preserves observed zeroes and never fills missing observations wi
     ).textContent;
 
   assert.equal(observedValue("temperature"), "0 °C");
-  assert.equal(observedValue("water"), "0 °C*");
+  assert.equal(observedValue("water"), "0 °C *");
   assert.equal(observedValue("wind"), "0 m/s");
   assert.equal(observedValue("gust"), "0 m/s");
   assert.equal(observedValue("cloud"), "0 %");
@@ -345,7 +352,7 @@ test("Detailed keeps current-hour forecast values separate from observations in 
       )[1].querySelector("span").textContent;
 
     assert.equal(forecastValue("temperature"), "9 °C");
-    assert.equal(forecastValue("water"), "—");
+    assert.equal(forecastValue("water"), "");
     assert.equal(forecastValue("wind"), "4 m/s");
     assert.equal(forecastValue("gust"), "6 m/s");
     assert.equal(forecastValue("cloud"), "80 %");
@@ -387,7 +394,7 @@ test("Detailed preserves forecast zeroes and leaves missing current-hour forecas
   assert.equal(forecastValue("wind"), "0 m/s");
   assert.equal(forecastValue("gust"), "0 m/s");
   assert.equal(forecastValue("cloud"), "0 %");
-  assert.equal(forecastValue("water"), "—");
+  assert.equal(forecastValue("water"), "");
 
   // Remove the current hour, leaving only the future 20:00 forecast.
   const futureOnly = {
@@ -403,9 +410,11 @@ test("Detailed preserves forecast zeroes and leaves missing current-hour forecas
 
   await render({ ...input, data: futureOnly });
 
-  for (const key of ["temperature", "water", "wind", "gust", "cloud"]) {
+  for (const key of ["temperature", "wind", "gust", "cloud"]) {
     assert.equal(forecastValue(key), "—");
   }
+
+  assert.equal(forecastValue("water"), "");
 
   // The same forecast becomes valid when its hour actually starts.
   await render({
@@ -415,7 +424,7 @@ test("Detailed preserves forecast zeroes and leaves missing current-hour forecas
   });
 
   assert.equal(forecastValue("temperature"), "9 °C");
-  assert.equal(forecastValue("water"), "—");
+  assert.equal(forecastValue("water"), "");
   assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
 
   // A nullable/missing field must not erase other available forecast fields.
@@ -461,14 +470,14 @@ test("Detailed separates rain intervals and probability, preserving zeroes and m
       cellValue("rain", 0),
       locale === "fi" ? "0,4 mm" : "0.4 mm",
     );
-    assert.equal(cellValue("rain", 1), "—");
+    assert.equal(cellValue("rain", 1), "");
 
     assert.ok(
       row("probability").querySelector("th").textContent.includes(
         `${t.probability} 19:00–20:00`,
       ),
     );
-    assert.equal(cellValue("probability", 0), "—");
+    assert.equal(cellValue("probability", 0), "");
     assert.equal(cellValue("probability", 1), "20 %");
 
     // A later rain sample still describes its own preceding hour.
@@ -495,6 +504,269 @@ test("Detailed separates rain intervals and probability, preserving zeroes and m
     assert.ok(
       !row("rain").querySelector("th").textContent.includes("18:10–19:10"),
     );
+
+    await act(() => buttons()[0].click());
+  }
+});
+
+test("source dropdown contains grouped timestamps while Detailed cells remain compact", async () => {
+  for (const locale of ["en", "fi"]) {
+    const input = props(locale);
+    const t = translations[locale].currentConditions;
+
+    await render(input);
+
+    const sources = () =>
+      document.querySelector("details[data-current-sources]");
+
+    const measuredTime = (key) =>
+      sources().querySelector(
+        `[data-source-fields~="${key}"] time[data-measured]`,
+      );
+
+    assert.equal(sources().open, false);
+    assert.equal(sources().querySelector("summary").textContent, t.dataSources);
+
+    await act(() => sources().querySelector("summary").click());
+    assert.equal(sources().open, true);
+
+    assert.equal(
+      measuredTime("temperature").dateTime,
+      "2026-10-19T19:00:00+03:00",
+    );
+    assert.equal(
+      measuredTime("water").dateTime,
+      "2026-10-19T18:32:00+03:00",
+    );
+
+    // Equal source/sample/fetch metadata is grouped.
+    assert.equal(measuredTime("temperature"), measuredTime("wind"));
+
+    assert.equal(
+      sources().querySelector("time[data-forecast-retrieved]").dateTime,
+      "2026-10-19T19:07:00+03:00",
+    );
+
+    await act(() => buttons()[1].click());
+
+    assert.equal(document.querySelectorAll("tbody time").length, 0);
+    assert.equal(
+      document.querySelectorAll("thead time[data-forecast-retrieved]").length,
+      0,
+    );
+    assert.equal(document.querySelector("thead time").textContent, "19:00–20:00");
+    assert.equal(sources().open, true);
+
+    // A different observation time gets its own group.
+    const changed = fixture();
+    changed.observations.data.observations.push({
+      ...changed.observations.data.observations[0],
+      timestamp: "2026-10-19T19:10:00+03:00",
+      temperature: null,
+    });
+
+    await render({ ...input, data: changed });
+
+    assert.equal(
+      measuredTime("temperature").dateTime,
+      "2026-10-19T19:00:00+03:00",
+    );
+    assert.equal(
+      measuredTime("wind").dateTime,
+      "2026-10-19T19:10:00+03:00",
+    );
+    assert.notEqual(measuredTime("temperature"), measuredTime("wind"));
+    assert.equal(sources().open, true);
+
+    await act(() => buttons()[0].click());
+    await act(() => sources().querySelector("summary").click());
+  }
+});
+
+test("source timestamps use compact times, retain older dates and disappear when unavailable", async () => {
+  const input = props();
+  input.nowMs = Date.parse("2026-10-25T03:30:00+02:00");
+
+  const waterTime = () =>
+    document.querySelector(
+      '[data-current-sources] [data-source-fields="water"] time[data-measured]',
+    );
+
+  input.data.water.data.observations[0].timestamp =
+    "2026-10-25T03:10:00+03:00";
+
+  await render(input);
+
+  assert.equal(waterTime().textContent, "03:10");
+  assert.equal(
+    waterTime().dateTime,
+    "2026-10-25T03:10:00+03:00",
+  );
+
+  const second = fixture();
+  second.water.data.observations[0].timestamp =
+    "2026-10-25T03:10:00+02:00";
+
+  await render({ ...input, data: second });
+
+  // The visible label is identical; the actual timestamp remains distinct.
+  assert.equal(waterTime().textContent, "03:10");
+  assert.equal(
+    waterTime().dateTime,
+    "2026-10-25T03:10:00+02:00",
+  );
+
+  const older = fixture();
+  older.water.data.observations[0].timestamp =
+    "2026-10-24T18:32:00+03:00";
+
+  await render({ ...input, data: older });
+
+  assert.match(waterTime().textContent, /2026/);
+  assert.ok(waterTime().textContent.includes(" · 18:32"));
+  assert.ok(!waterTime().textContent.includes("GMT"));
+
+  await render({
+    ...input,
+    data: {
+      ...input.data,
+      water: { status: "unavailable", httpStatus: 404 },
+      forecasts: { status: "unavailable", httpStatus: 503 },
+    },
+  });
+
+  assert.equal(waterTime(), null);
+  assert.equal(
+    document.querySelector(
+      "[data-current-sources] time[data-forecast-retrieved]",
+    ),
+    null,
+  );
+
+  assert.equal(waterTime(), null);
+  assert.equal(
+    document.querySelector("[data-current-sources] time[data-forecast-retrieved]"),
+    null,
+  );
+});
+
+test("Detailed water asterisk links to a visible API-driven explanation", async () => {
+  for (const locale of ["en", "fi"]) {
+    const input = props(locale);
+    const t = translations[locale].currentConditions;
+    const location = "Water station B";
+
+    input.data.water.data.observation_location = location;
+
+    await render(input);
+    await act(() => buttons()[1].click());
+
+    const value = document.querySelector(
+      '[data-detailed-condition="water"] td > span',
+    );
+
+    assert.ok(value.textContent.endsWith(" °C *"));
+
+    const noteId = value.getAttribute("aria-describedby");
+    assert.ok(noteId);
+
+    const note = document.getElementById(noteId);
+    assert.ok(note);
+        assert.equal(note.textContent, `* ${location}`);
+
+    const sources = document.querySelector("[data-current-sources]");
+    assert.equal(sources.previousElementSibling, note);
+    assert.equal(note.closest("details"), null);
+
+    const forecastSection = sources.querySelector(
+      '[data-source-fields="forecast"]',
+    );
+    assert.ok(!forecastSection.textContent.includes(t.forecastScope));
+
+    await act(() => buttons()[0].click());
+    assert.equal(document.getElementById(noteId), null);
+  }
+});
+
+test("Detailed uses the compact station name while Data sources retains the full name", async () => {
+  for (const locale of ["en", "fi"]) {
+    await render(props(locale));
+    await act(() => buttons()[1].click());
+
+    const observationsHeading =
+      document.querySelectorAll("thead th")[1];
+
+    assert.ok(observationsHeading.textContent.includes("Kaisaniemi"));
+    assert.ok(
+      !observationsHeading.textContent.includes("Helsinki Kaisaniemi"),
+    );
+
+    const sources = document.querySelector("[data-current-sources]");
+    assert.ok(sources.textContent.includes("Helsinki Kaisaniemi"));
+
+    await act(() => buttons()[0].click());
+  }
+});
+
+test("Observations heading shows the actual weather measurement time or range", async () => {
+  for (const locale of ["en", "fi"]) {
+    const input = props(locale);
+
+    // Rain and water must not influence the weather heading's time.
+    input.data.observations.data.observations[0].precipitation = null;
+    input.data.observations.data.observations.push({
+      ...input.data.observations.data.observations[0],
+      timestamp: "2026-10-19T18:00:00+03:00",
+      temperature: null,
+      wind_speed: null,
+      wind_gust: null,
+      cloudiness: null,
+      precipitation: 0.4,
+    });
+
+    await render(input);
+    await act(() => buttons()[1].click());
+
+    const headingTime = () =>
+      document.querySelector("[data-observation-range]").textContent;
+
+    assert.equal(headingTime(), "19:00");
+
+    // Temperature stays at 19:00; other weather readings advance to 19:10.
+    const updated = fixture();
+    updated.observations.data.observations.push({
+      ...updated.observations.data.observations[0],
+      timestamp: "2026-10-19T19:10:00+03:00",
+      temperature: null,
+    });
+
+    await render({ ...input, data: updated });
+
+    assert.equal(headingTime(), "19:00–19:10");
+
+    // Zero is an available measurement and must retain its timestamp.
+    const zero = fixture();
+    Object.assign(zero.observations.data.observations[0], {
+      temperature: 0,
+      wind_speed: null,
+      wind_gust: null,
+      cloudiness: null,
+    });
+
+    await render({ ...input, data: zero });
+
+    assert.equal(headingTime(), "19:00");
+
+    // Forecast and water data cannot supply the observation timestamp.
+    await render({
+      ...input,
+      data: {
+        ...input.data,
+        observations: { status: "unavailable", httpStatus: 503 },
+      },
+    });
+
+    assert.equal(headingTime(), "—");
 
     await act(() => buttons()[0].click());
   }

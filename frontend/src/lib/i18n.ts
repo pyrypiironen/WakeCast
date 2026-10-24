@@ -37,9 +37,16 @@ export const translations = {
       measured: "Measured",
       forecast: "Forecast",
       retrieved: "Retrieved",
+      dataSources: "Data sources",
+            waterObservationLocation:
+        "Water temperature observations from {location}.",
+      waterObservationLocationUnavailable:
+        "Water-temperature observation location is unavailable.",
+      forecastScope:
+        "No water-temperature forecast is available. Forecast rain amounts are not shown in this view. Rain probability is forecast-only.",
       measurement: "Measurement",
       observations: "Observations",
-      forecastForNow: "Forecast for now",
+      forecastForNow: "Forecast",
       forecastLocation: "Forecast location",
       detailedCaption: "Latest measurements and the current-hour forecast",
       waterStationExplanation:
@@ -153,9 +160,16 @@ export const translations = {
       measured: "Mitattu",
       forecast: "Ennuste",
       retrieved: "Haettu",
+      dataSources: "Tietolähteet",
+      waterObservationLocation:
+        "Veden lämpötilahavainnot: {location}.",
+      waterObservationLocationUnavailable:
+        "Veden lämpötilan havaintopaikka ei ole saatavilla.",
+      forecastScope:
+        "Veden lämpötilaennustetta ei ole saatavilla. Ennustettuja sademääriä ei näytetä tässä näkymässä. Sateen todennäköisyys on vain ennustetieto.",
       measurement: "Suure",
       observations: "Havainnot",
-      forecastForNow: "Ennuste nykyiselle tunnille",
+      forecastForNow: "Ennuste",
       forecastLocation: "Ennustepaikka",
       detailedCaption: "Viimeisimmät mittaukset ja nykyisen tunnin ennuste",
       waterStationExplanation:

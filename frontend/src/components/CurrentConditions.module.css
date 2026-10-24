@@ -119,3 +119,99 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+.sampleTime {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.sourceDetails {
+  margin-top: 0.5rem;
+  padding-top: 0.0rem;
+  font-size: 0.875rem;
+}
+
+.sourceDetails > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sourceDetails > summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+
+.sourceSection {
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.sourceSection p {
+  margin: 0.25rem 0;
+}
+
+.sourceSection > div + div {
+  margin-top: 0.75rem;
+}
+
+.sourceMeta {
+  color: var(--color-muted);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.waterSourceNote {
+  margin: 0.75rem 0 0;
+  padding-top: 0.0rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.sourceDetails {
+  line-height: 1.4;
+}
+
+.sourceSection > strong {
+  font-weight: 600;
+}
+
+@media (max-width: 420px) {
+  .waterSourceNote,
+  .sourceDetails {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+}
+
+/* Borders above the first and below the last Detailed measurement row. */
+.detailsTable tbody tr:first-child > th,
+.detailsTable tbody tr:first-child > td {
+  border-top: 0.5px solid var(--color-primary);
+}
+
+.detailsTable tbody tr:last-child > th,
+.detailsTable tbody tr:last-child > td {
+  border-bottom: 0.5px solid var(--color-primary);
+}
+
+/* Space between column headings and the top line. */
+.detailsTable thead th {
+  padding-bottom: 0.75rem;
+}
+
+/* Space between the top line and Air temperature. */
+.detailsTable tbody tr:first-child > th,
+.detailsTable tbody tr:first-child > td {
+  padding-top: 0.75rem;
+}
+
+/* Space between Rain probability and the bottom line. */
+.detailsTable tbody tr:last-child > th,
+.detailsTable tbody tr:last-child > td {
+  padding-bottom: 0.75rem;
+}

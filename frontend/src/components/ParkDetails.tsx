@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import DailyForecast from "./DailyForecast";
 import { translations, type Locale } from "@/lib/i18n";
 import type { Park } from "@/types/park";
@@ -17,9 +15,6 @@ export default function ParkDetails({
   return (
     <article className={styles.page}>
       <header className={styles.heading}>
-        <Link className={styles.back} href={`/${locale}`}>
-          {t.back}
-        </Link>
         <h1>{park.name}</h1>
         <p className={styles.location}>{park.city}</p>
         {!park.is_active && <p className="status-message">{t.inactive}</p>}
