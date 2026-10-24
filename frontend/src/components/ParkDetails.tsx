@@ -13,11 +13,6 @@ export default function ParkDetails({
   locale: Locale;
 }) {
   const t = translations[locale].parkPage;
-  const weatherSections = [
-    ["current-conditions", t.current],
-    ["daily-forecast", t.daily],
-    ["detailed-weather", t.detailed],
-  ];
 
   return (
     <article className={styles.page}>
@@ -30,30 +25,17 @@ export default function ParkDetails({
         {!park.is_active && <p className="status-message">{t.inactive}</p>}
       </header>
 
-      {/* Daily weather is connected; other weather sections remain placeholders. */}
       <div className={styles.weather}>
-        {weatherSections.map(([id, title]) => (
-          <section
-            key={id}
-            className={`${styles.placeholder} ${
-              id === "daily-forecast" ? styles.dailyForecast : ""
-            }`}
-            aria-labelledby={id}
-          >
-            {id === "daily-forecast" ? (
-              <DailyForecast
-                slug={park.slug}
-                locale={locale}
-                timeZone={park.timezone}
-              />
-            ) : (
-              <>
-                <h2 id={id}>{title}</h2>
-                <p>{t.comingSoon}</p>
-              </>
-            )}
-          </section>
-        ))}
+        <DailyForecast
+          slug={park.slug}
+          locale={locale}
+          timeZone={park.timezone}
+          includeCurrentConditions
+        />
+        <section className={styles.placeholder} aria-labelledby="detailed-weather">
+          <h2 id="detailed-weather">{t.detailed}</h2>
+          <p>{t.comingSoon}</p>
+        </section>
       </div>
     </article>
   );

@@ -49,6 +49,17 @@
 - [ ] **2.6** Add current-conditions weather icons with day/night, cloudiness and precipitation logic supported by real data.
 - [ ] **2.7** Add clickable/tappable source-details disclosure by current conditions, including providers, nearby station names and true sample times.
 
+### Current Conditions — scoped Tasks 1–3 (2026-10-24)
+
+- [x] **Task 1 — Data preparation:** Reuse the daily weather payloads and refresh cycle; select independent latest measured values and the backend-selected current forecast hour; retain nulls, zeroes, provenance, timestamps, rainfall intervals and freshness. Cover midnight and both DST transitions.
+- [x] **Task 2 — Component layout:** Left summary/right reserved wind area on desktop, stacked mobile layout, accessible Simple/Detailed switch, Simple default and labelled Detailed placeholder. No wind visualization added.
+- [x] **Task 3 — Simple view:** Seven ordered, bilingual icon/label/value rows with aligned values, actual rain intervals, current-hour probability and explicit missing/stale states.
+- [ ] **Task 4 — Detailed view:** Implement the agreed three-column table in a separately authorized task.
+
+Verification and data limitations: [Current Conditions implementation notes](CURRENT_CONDITIONS.md).
+The broader Section 2 items above retain their existing status; source disclosure,
+Data Availability expansion and the wind visualization are outside Tasks 1–3.
+
 ## 3. Daily weather chart and data readiness
 
 ### 3.1 Backend integration and data selection
@@ -153,3 +164,4 @@
 6. Keep observations, forecasts and water-temperature samples distinct. Preserve source, station, timestamp, `fetched_at`, nulls, and forecast history. Use park-local dates and DST-aware boundaries.
 7. In routine development status messages, prefer the current top-level checklist section; provide the complete checklist when expressly requested, subject to the repository's active instructions.
 8. Stop after the requested task, report changed files, actual verification and any unresolved items; do not commit/push/merge or migrate a database without authorization specific to that action.
+
