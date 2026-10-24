@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo } from "react";
 import type { DailyWeatherData } from "@/lib/daily-weather";
 import {
   prepareCurrentConditions,
@@ -14,9 +14,9 @@ import {
 import { formatPercentage, formatPrecipitation, formatTemperature, formatWindSpeed } from "@/lib/format";
 import { translations, type Locale } from "@/lib/i18n";
 import { weatherStationDisplayName } from "@/lib/station-display-name";
-import forecastStyles from "./DailyForecast.module.css";
 import styles from "./CurrentConditions.module.css"
 import CurrentConditionsSources from "./CurrentConditionsSources";
+import CurrentConditionsAvailability from "./CurrentConditionsAvailability";
 
 interface CurrentConditionsProps {
   data: DailyWeatherData;
@@ -27,8 +27,8 @@ interface CurrentConditionsProps {
 }
 
 export default function CurrentConditions({ data, nowMs, locale, timeZone, refreshFailed = false }: CurrentConditionsProps) {
-  const [view, setView] = useState<"simple" | "detailed">("simple");
-  const panelId = useId();
+  // Keep the Simple rendering code available for possible future use.
+  const view = "detailed";  
   const waterSourceNoteId = useId();
   const t = translations[locale].currentConditions;
   const current = useMemo(() => prepareCurrentConditions(data, new Date(nowMs), timeZone), [data, nowMs, timeZone]);
@@ -121,19 +121,13 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
   return (
     <>
       <header className={styles.header}>
-        <h2 id="current-conditions">{translations[locale].parkPage.current}</h2>
-        <div className={styles.switch} role="group" aria-label={t.view}>
-          {(["simple", "detailed"] as const).map((mode) => (
-            <button key={mode} type="button" className={forecastStyles.windowButton}
-              aria-pressed={view === mode} aria-controls={panelId} onClick={() => setView(mode)}>
-              {t[mode]}
-            </button>
-          ))}
-        </div>
+        <h2 id="current-conditions">
+          {translations[locale].parkPage.current}
+        </h2>
       </header>
       {refreshFailed && <p className={styles.warning} role="status">{t.refreshFailed}</p>}
       <div className={styles.layout}>
-        <div id={panelId}>
+        <div>
           {view === "detailed" ? (
             <table className={styles.detailsTable}>
               <caption className={styles.srOnly}>
@@ -188,13 +182,9 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
                   const observationValue =
                     key === "probability" ? null : reading.value;
 
-                  const label = `${t[key]}${
-                    reading.interval
-                      ? ` ${formatCurrentInterval(
-                          reading.interval,
-                          timeZone,
-                          locale,
-                        )}`
+                 const label = `${t[key]}${
+                    key !== "probability" && reading.interval
+                      ? ` ${formatCurrentInterval(reading.interval, timeZone, locale)}`
                       : ""
                   }`;
                   const showWaterAsterisk =
@@ -300,8 +290,20 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
 
           {view === "detailed" && (
           <p id={waterSourceNoteId} className={styles.waterSourceNote}>
-              * {waterStation}
-            </p>
+          * {waterStation}
+          {current.water.value !== null && current.water.timestamp && (
+            <>
+              {" "}
+              <time dateTime={current.water.timestamp}>
+                {formatLocalTime(
+                  new Date(current.water.timestamp),
+                  timeZone,
+                  locale,
+                )}
+              </time>
+            </>
+          )}
+        </p>
           )}
 
           <CurrentConditionsSources
@@ -311,7 +313,13 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
             locale={locale}
             timeZone={timeZone}
           />
-        </div>
+          <CurrentConditionsAvailability
+            current={current}
+            nowMs={nowMs}
+            locale={locale}
+            timeZone={timeZone}
+          />
+          </div>
         {/* Reserved for the wind-direction visualization; no invented bearing or new chart. */}
         <div className={styles.windSlot} aria-hidden="true" />
       </div>

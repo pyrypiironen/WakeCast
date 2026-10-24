@@ -60,65 +60,100 @@ async function render(input) {
   }
   await act(() => root.render(React.createElement(CurrentConditions, input)));
 }
-const row = (key) => document.querySelector(`[data-condition="${key}"]`);
-const value = (key) => row(key).querySelector("dd").firstChild.textContent;
-const buttons = () => [...document.querySelectorAll("button")];
+const row = (key) =>
+  document.querySelector(`[data-detailed-condition="${key}"]`);
 
-test("Simple defaults to seven ordered bilingual rows, aligned value cells and honest provenance", async () => {
+function cellValue(key, column) {
+  const measurementRow = row(key);
+  assert.ok(measurementRow, `Missing row: ${key}`);
+
+  const cell = measurementRow.querySelectorAll("td")[column];
+  assert.ok(cell, `Missing column ${column} for ${key}`);
+
+  return cell.querySelector("span").textContent;
+}
+
+const observedValue = (key) => cellValue(key, 0);
+const forecastValue = (key) => cellValue(key, 1);
+
+test("Detailed is the only view and displays seven ordered bilingual rows", async () => {
   for (const locale of ["en", "fi"]) {
     await render(props(locale));
     const t = translations[locale].currentConditions;
-    assert.deepEqual([...document.querySelectorAll("[data-condition]")].map(r => r.dataset.condition),
-      ["temperature", "water", "wind", "gust", "cloud", "rain", "probability"]);
-    assert.equal(buttons()[0].getAttribute("aria-pressed"), "true");
-    assert.equal(buttons()[1].getAttribute("aria-pressed"), "false");
-    assert.equal(buttons()[0].textContent, t.simple);
-    assert.equal(buttons()[1].textContent, t.detailed);
-    assert.equal(document.querySelector('[role="group"]').getAttribute("aria-label"), t.view);
-    assert.equal(document.querySelectorAll("dt").length, 7);
-    assert.equal(document.querySelectorAll("dd").length, 7);
-    assert.equal(value("temperature"), locale === "fi" ? "8,4 °C" : "8.4 °C");
-    assert.equal(value("water"), locale === "fi" ? "9,8 °C" : "9.8 °C");
-    assert.equal(value("probability"), "20 %");
-    assert.ok(row("rain").textContent.includes(`${t.rain} 18:00–19:00`));
-    assert.ok(row("probability").textContent.includes(`${t.probability} 19:00–20:00`));
-    assert.ok(row("probability").textContent.includes(t.forecast));
-    assert.ok(row("probability").textContent.includes("Karhusaari"));
-    assert.ok(row("temperature").textContent.includes("Helsinki Kaisaniemi"));
-    assert.equal(row("water").querySelector("time").dateTime, "2026-10-19T18:32:00+03:00");
-    assert.ok(row("water").querySelector("dd").title.includes("Lauttasaaren mattolaituri"));
+
+    assert.deepEqual(
+      [...document.querySelectorAll("[data-detailed-condition]")]
+        .map((element) => element.dataset.detailedCondition),
+      ["temperature", "water", "wind", "gust", "cloud", "rain", "probability"],
+    );
+
+    assert.equal(document.querySelectorAll("button").length, 0);
+    assert.equal(document.querySelectorAll("[data-condition]").length, 0);
+    assert.equal(document.querySelectorAll("table").length, 1);
+
+    assert.equal(
+      observedValue("temperature"),
+      locale === "fi" ? "8,4 °C" : "8.4 °C",
+    );
+    assert.equal(
+      observedValue("water"),
+      locale === "fi" ? "9,8 °C *" : "9.8 °C *",
+    );
+    assert.equal(observedValue("probability"), "");
+    assert.equal(forecastValue("probability"), "20 %");
+
+    assert.ok(
+      row("rain").querySelector("th").textContent.includes(
+        `${t.rain} 18:00–19:00`,
+      ),
+    );
+
+    const probabilityHeading = row("probability").querySelector("th");
+    assert.ok(probabilityHeading.textContent.includes(t.probability));
+    assert.doesNotMatch(probabilityHeading.textContent, /\d{2}:\d{2}/);
+
+    assert.ok(
+      row("temperature").querySelector("td").title.includes(
+        "Helsinki Kaisaniemi",
+      ),
+    );
+    assert.ok(
+      row("probability").querySelectorAll("td")[1].title.includes(
+        "Karhusaari",
+      ),
+    );
+
+    const waterValue = row("water").querySelector("td > span");
+    const waterNote = document.getElementById(
+      waterValue.getAttribute("aria-describedby"),
+    );
+
+    assert.ok(waterNote);
+    assert.equal(
+      waterNote.querySelector("time").dateTime,
+      "2026-10-19T18:32:00+03:00",
+    );
+
     const sources = document.querySelector("details[data-current-sources]");
     assert.ok(sources);
     assert.equal(sources.open, false);
-    assert.equal(
-      sources.querySelector("summary").textContent,
-      t.dataSources,
-    );
-    buttons()[0].focus();
-    assert.equal(document.activeElement, buttons()[0]);
+    assert.equal(sources.querySelector("summary").textContent, t.dataSources);
+
+    sources.querySelector("summary").focus();
+    assert.equal(document.activeElement, sources.querySelector("summary"));
   }
 });
 
-test("Detailed has three localized columns and preserves selection across refresh", async () => {
+test("Detailed has three localized columns and updates without replacing the table", async () => {
   for (const locale of ["en", "fi"]) {
     const input = props(locale);
     const t = translations[locale].currentConditions;
 
     await render(input);
 
-    assert.equal(buttons()[0].getAttribute("aria-pressed"), "true");
-    assert.equal(document.querySelectorAll("table").length, 0);
+    const table = document.querySelector("table");
+    assert.ok(table);
 
-    const target = buttons()[1].getAttribute("aria-controls");
-
-    await act(() => buttons()[1].click());
-
-    assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
-
-    const panel = document.getElementById(target);
-    assert.equal(panel.querySelectorAll("table").length, 1);
-
-    const table = panel.querySelector("table");
     const headings = [...table.querySelectorAll("thead th")];
 
     assert.deepEqual(
@@ -133,58 +168,113 @@ test("Detailed has three localized columns and preserves selection across refres
       t.detailedCaption,
     );
 
+    const refreshed = fixture();
+    refreshed.observations.data.observations[0].temperature = 7;
+
     await render({
       ...input,
       nowMs: input.nowMs + 60_000,
-      data: fixture(),
+      data: refreshed,
     });
 
-    assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
+    assert.equal(document.querySelector("table"), table);
     assert.equal(document.querySelectorAll("table").length, 1);
-
-    await act(() => buttons()[0].click());
-
-    assert.equal(buttons()[0].getAttribute("aria-pressed"), "true");
-    assert.equal(document.querySelectorAll("table").length, 0);
-    assert.equal(document.querySelectorAll("dd").length, 7);
+    assert.equal(observedValue("temperature"), "7 °C");
+    assert.equal(document.querySelectorAll("button").length, 0);
   }
 });
 
-test("null displays a dash, zero displays zero, cached stale readings and refresh failures are identified", async () => {
+test("Detailed preserves missing values, zeroes and cached measurement timestamps after refresh failure", async () => {
   const input = props();
+
   input.data.observations.data.observations[0].temperature = null;
   input.data.observations.data.observations[0].precipitation = 0;
   input.data.forecasts.data.forecasts[0].precipitation_probability = 0;
+
   await render(input);
-  assert.equal(value("temperature"), "—");
-  assert.ok(row("temperature").textContent.includes("Unavailable"));
-  assert.equal(value("rain"), "0 mm");
-  assert.equal(value("probability"), "0 %");
-  await render({ ...input, nowMs: Date.parse("2026-10-19T21:30:00+03:00"), refreshFailed: true });
-  assert.ok(row("water").textContent.includes("Updates delayed"));
-  assert.ok(document.querySelector('[role="status"]').textContent.includes("original timestamps"));
-  assert.equal(value("probability"), "—");
+
+  assert.equal(observedValue("temperature"), "—");
+  assert.equal(observedValue("rain"), "0 mm");
+  assert.equal(forecastValue("probability"), "0 %");
+
+  await render({
+    ...input,
+    nowMs: Date.parse("2026-10-19T21:30:00+03:00"),
+    refreshFailed: true,
+  });
+
+  assert.equal(observedValue("water"), "9.8 °C *");
+  assert.equal(
+    document.querySelector(
+      '[data-current-sources] [data-source-fields="water"] time[data-measured]',
+    ).dateTime,
+    "2026-10-19T18:32:00+03:00",
+  );
+  assert.ok(
+    document.querySelector('[role="status"]').textContent.includes(
+      translations.en.currentConditions.refreshFailed,
+    ),
+  );
+  assert.equal(forecastValue("probability"), "—");
 });
 
-test("hour rolls forward from live time without borrowing a different forecast period", async () => {
+test("hour rolls forward without borrowing a different forecast period", async () => {
   const input = props();
+
   await render(input);
-  assert.equal(value("probability"), "20 %");
-  await render({ ...input, nowMs: Date.parse("2026-10-19T20:00:00+03:00") });
-  assert.equal(value("probability"), "40 %");
-  assert.ok(row("probability").textContent.includes("20:00–21:00"));
+
+  assert.equal(forecastValue("probability"), "20 %");
+  assert.equal(
+    document.querySelector("thead time").textContent,
+    "19:00–20:00",
+  );
+
+  await render({
+    ...input,
+    nowMs: Date.parse("2026-10-19T20:00:00+03:00"),
+  });
+
+  assert.equal(forecastValue("probability"), "40 %");
+  assert.equal(
+    document.querySelector("thead time").textContent,
+    "20:00–21:00",
+  );
 });
 
-test("server markup hydrates without mismatches and remains interactive", async () => {
+test("server markup hydrates without mismatches and Data sources remains interactive", async () => {
   const input = props();
   const container = document.createElement("div");
-  container.innerHTML = renderToString(React.createElement(CurrentConditions, input));
+
+  container.innerHTML = renderToString(
+    React.createElement(CurrentConditions, input),
+  );
   document.body.append(container);
+
   const errors = [];
-  await act(() => { root = hydrateRoot(container, React.createElement(CurrentConditions, input), { onRecoverableError: error => errors.push(error) }); });
+
+  await act(() => {
+    root = hydrateRoot(
+      container,
+      React.createElement(CurrentConditions, input),
+      { onRecoverableError: (error) => errors.push(error) },
+    );
+  });
+
   assert.deepEqual(errors, []);
-  await act(() => buttons()[1].click());
-  assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
+  assert.equal(container.querySelectorAll("table").length, 1);
+
+  const sources = container.querySelector("details[data-current-sources]");
+  assert.ok(sources);
+  assert.equal(sources.open, false);
+
+  await act(() => sources.querySelector("summary").click());
+  assert.equal(sources.open, true);
+
+  await act(() => sources.querySelector("summary").click());
+  assert.equal(sources.open, false);
+
+  assert.deepEqual(errors, []);
+});
 
 test("Detailed headings use API locations and the actual current forecast interval", async () => {
   for (const locale of ["en", "fi"]) {
@@ -198,7 +288,6 @@ test("Detailed headings use API locations and the actual current forecast interv
     input.data.forecasts.data.forecast_location = "Forecast location C";
 
     await render(input);
-    await act(() => buttons()[1].click());
 
     const headings = () => [
       ...document.querySelectorAll("thead th"),
@@ -216,7 +305,6 @@ test("Detailed headings use API locations and the actual current forecast interv
 
     await render(nextHour);
 
-    assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
     assert.ok(headings()[2].textContent.includes("20:00–21:00"));
 
     // Only a future forecast remains: do not label it as current.
@@ -250,7 +338,6 @@ test("Detailed headings use API locations and the actual current forecast interv
     assert.ok(!headings()[1].textContent.includes("Weather station A"));
     assert.ok(!headings()[2].textContent.includes("Forecast location C"));
 
-    await act(() => buttons()[0].click());
   }
 });
 
@@ -260,7 +347,6 @@ test("Detailed displays seven localized rows with water marked by an asterisk", 
     const t = translations[locale].currentConditions;
 
     await render(input);
-    await act(() => buttons()[1].click());
 
     const rows = [
       ...document.querySelectorAll("[data-detailed-condition]"),
@@ -293,8 +379,8 @@ test("Detailed displays seven localized rows with water marked by an asterisk", 
     const temperatureCell = rows[0].querySelector("td");
     assert.ok(temperatureCell.title.includes("Helsinki Kaisaniemi"));
 
-    await act(() => buttons()[0].click());
-    assert.equal(document.querySelectorAll("dd").length, 7);
+  assert.equal(document.querySelectorAll("[data-condition]").length, 0);
+  assert.equal(document.querySelectorAll("tbody tr").length, 7);
   }
 });
 
@@ -309,7 +395,6 @@ test("Detailed preserves observed zeroes and never fills missing observations wi
   input.data.water.data.observations[0].water_temperature = 0;
 
   await render(input);
-  await act(() => buttons()[1].click());
 
   const observedValue = (key) =>
     document.querySelector(
@@ -336,7 +421,6 @@ test("Detailed preserves observed zeroes and never fills missing observations wi
   assert.equal(observedValue("temperature"), "—");
   assert.equal(observedValue("water"), "—");
   assert.equal(observedValue("wind"), "0 m/s");
-  assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
 });
 
 test("Detailed keeps current-hour forecast values separate from observations in both languages", async () => {
@@ -344,7 +428,6 @@ test("Detailed keeps current-hour forecast values separate from observations in 
     const input = props(locale);
 
     await render(input);
-    await act(() => buttons()[1].click());
 
     const forecastValue = (key) =>
       document.querySelectorAll(
@@ -369,7 +452,6 @@ test("Detailed keeps current-hour forecast values separate from observations in 
     assert.ok(temperatureCells[1].title.includes("Karhusaari"));
     assert.ok(temperatureCells[1].title.includes("fmi_edited"));
 
-    await act(() => buttons()[0].click());
   }
 });
 
@@ -383,7 +465,6 @@ test("Detailed preserves forecast zeroes and leaves missing current-hour forecas
   forecast.cloudiness = 0;
 
   await render(input);
-  await act(() => buttons()[1].click());
 
   const forecastValue = (key) =>
     document.querySelectorAll(
@@ -425,7 +506,6 @@ test("Detailed preserves forecast zeroes and leaves missing current-hour forecas
 
   assert.equal(forecastValue("temperature"), "9 °C");
   assert.equal(forecastValue("water"), "");
-  assert.equal(buttons()[1].getAttribute("aria-pressed"), "true");
 
   // A nullable/missing field must not erase other available forecast fields.
   await render({
@@ -452,7 +532,6 @@ test("Detailed separates rain intervals and probability, preserving zeroes and m
     const t = translations[locale].currentConditions;
 
     await render(input);
-    await act(() => buttons()[1].click());
 
     const row = (key) =>
       document.querySelector(`[data-detailed-condition="${key}"]`);
@@ -474,7 +553,7 @@ test("Detailed separates rain intervals and probability, preserving zeroes and m
 
     assert.ok(
       row("probability").querySelector("th").textContent.includes(
-        `${t.probability} 19:00–20:00`,
+        `${t.probability}`,
       ),
     );
     assert.equal(cellValue("probability", 0), "");
@@ -505,7 +584,6 @@ test("Detailed separates rain intervals and probability, preserving zeroes and m
       !row("rain").querySelector("th").textContent.includes("18:10–19:10"),
     );
 
-    await act(() => buttons()[0].click());
   }
 });
 
@@ -547,7 +625,6 @@ test("source dropdown contains grouped timestamps while Detailed cells remain co
       "2026-10-19T19:07:00+03:00",
     );
 
-    await act(() => buttons()[1].click());
 
     assert.equal(document.querySelectorAll("tbody time").length, 0);
     assert.equal(
@@ -578,7 +655,6 @@ test("source dropdown contains grouped timestamps while Detailed cells remain co
     assert.notEqual(measuredTime("temperature"), measuredTime("wind"));
     assert.equal(sources().open, true);
 
-    await act(() => buttons()[0].click());
     await act(() => sources().querySelector("summary").click());
   }
 });
@@ -659,7 +735,6 @@ test("Detailed water asterisk links to a visible API-driven explanation", async 
     input.data.water.data.observation_location = location;
 
     await render(input);
-    await act(() => buttons()[1].click());
 
     const value = document.querySelector(
       '[data-detailed-condition="water"] td > span',
@@ -672,7 +747,7 @@ test("Detailed water asterisk links to a visible API-driven explanation", async 
 
     const note = document.getElementById(noteId);
     assert.ok(note);
-        assert.equal(note.textContent, `* ${location}`);
+        assert.equal(note.textContent, `* ${location} 18:32`);
 
     const sources = document.querySelector("[data-current-sources]");
     assert.equal(sources.previousElementSibling, note);
@@ -683,15 +758,20 @@ test("Detailed water asterisk links to a visible API-driven explanation", async 
     );
     assert.ok(!forecastSection.textContent.includes(t.forecastScope));
 
-    await act(() => buttons()[0].click());
-    assert.equal(document.getElementById(noteId), null);
+    await render({
+      ...input,
+      nowMs: input.nowMs + 60_000,
+      data: { ...input.data },
+    });
+
+assert.equal(document.getElementById(noteId), note);
+assert.equal(note.querySelector("time").textContent, "18:32");
   }
 });
 
 test("Detailed uses the compact station name while Data sources retains the full name", async () => {
   for (const locale of ["en", "fi"]) {
     await render(props(locale));
-    await act(() => buttons()[1].click());
 
     const observationsHeading =
       document.querySelectorAll("thead th")[1];
@@ -704,7 +784,6 @@ test("Detailed uses the compact station name while Data sources retains the full
     const sources = document.querySelector("[data-current-sources]");
     assert.ok(sources.textContent.includes("Helsinki Kaisaniemi"));
 
-    await act(() => buttons()[0].click());
   }
 });
 
@@ -725,7 +804,6 @@ test("Observations heading shows the actual weather measurement time or range", 
     });
 
     await render(input);
-    await act(() => buttons()[1].click());
 
     const headingTime = () =>
       document.querySelector("[data-observation-range]").textContent;
@@ -768,7 +846,118 @@ test("Observations heading shows the actual weather measurement time or range", 
 
     assert.equal(headingTime(), "—");
 
-    await act(() => buttons()[0].click());
   }
 });
+
+test("Current availability stays hidden for complete data, including valid zeroes", async () => {
+  const input = props();
+  const observation = input.data.observations.data.observations[0];
+  const forecast = input.data.forecasts.data.forecasts[0];
+
+  Object.assign(observation, {
+    temperature: 0,
+    wind_speed: 0,
+    wind_gust: 0,
+    cloudiness: 0,
+    precipitation: 0,
+  });
+
+  input.data.water.data.observations[0].water_temperature = 0;
+
+  Object.assign(forecast, {
+    temperature: 0,
+    wind_speed: 0,
+    wind_gust: 0,
+    cloudiness: 0,
+    precipitation_probability: 0,
+  });
+
+  await render(input);
+
+  assert.equal(
+    document.querySelector("[data-current-availability]"),
+    null,
+  );
+});
+
+test("Current availability is bilingual, collapsed by default and clears after refresh", async () => {
+  for (const locale of ["en", "fi"]) {
+    const input = props(locale);
+    input.data.forecasts.data.forecasts[0].precipitation_probability = null;
+
+    await render(input);
+
+    const disclosure = document.querySelector("[data-current-availability]");
+    assert.ok(disclosure);
+    assert.equal(disclosure.open, false);
+    assert.equal(disclosure.querySelectorAll("li").length, 1);
+    assert.ok(
+      disclosure.textContent.includes(
+        translations[locale].currentConditions.probability,
+      ),
+    );
+    assert.ok(
+      disclosure.querySelector("summary").textContent.includes(
+        locale === "fi" ? "Tietojen saatavuus" : "Data availability",
+      ),
+    );
+
+    await act(() => disclosure.querySelector("summary").click());
+    assert.equal(disclosure.open, true);
+
+    await render({ ...input, nowMs: input.nowMs + 60_000 });
+    assert.equal(
+      document.querySelector("[data-current-availability]"),
+      disclosure,
+    );
+    assert.equal(disclosure.open, true);
+
+    await render({ ...input, data: fixture() });
+    assert.equal(
+      document.querySelector("[data-current-availability]"),
+      null,
+    );
+  }
+});
+
+test("Current availability reports a failed weather source once", async () => {
+  const input = props();
+  input.data.observations = {
+    status: "unavailable",
+    httpStatus: 503,
+  };
+
+  await render(input);
+
+  const notices = [
+    ...document.querySelectorAll("[data-current-availability] li"),
+  ];
+
+  assert.deepEqual(
+    notices.map((notice) => notice.textContent),
+    ["Weather observations are unavailable."],
+  );
+});
+
+test("Current availability accepts the latest completed rainfall hour despite newer weather observations", async () => {
+  const input = props();
+
+  input.data.observations.data.observations.push({
+    ...input.data.observations.data.observations[0],
+    timestamp: "2026-10-19T19:10:00+03:00",
+    precipitation: null,
+  });
+
+  await render(input);
+
+  // At 19:20, rainfall for 18:00–19:00 is still valid.
+  assert.equal(
+    document.querySelector("[data-current-availability]"),
+    null,
+  );
+  assert.ok(
+    document.querySelector(
+      '[data-detailed-condition="rain"] th',
+    ).textContent.includes("18:00–19:00"),
+  );
 });

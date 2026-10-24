@@ -215,3 +215,14 @@
 .detailsTable tbody tr:last-child > td {
   padding-bottom: 0.75rem;
 }
+
+.availabilityIcon {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-inline-start: 0.4rem;
+}
+
+.availabilityList {
+  margin: 0.25rem 0 0;
+  padding-inline-start: 1.25rem;
+}

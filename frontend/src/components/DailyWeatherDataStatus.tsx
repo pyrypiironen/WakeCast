@@ -11,6 +11,7 @@ import {
 import type {
   PreparedDailyWeatherChart,
 } from "./daily-weather-chart-data";
+import styles from "./DailyWeatherChart.module.css";
 
 interface Props {
   data: DailyWeatherData;
@@ -18,6 +19,7 @@ interface Props {
   timeZone: string;
   locale: Locale;
   chart: PreparedDailyWeatherChart;
+  cloudVisible: boolean;
 }
 
 const messages = {
@@ -49,12 +51,57 @@ const messages = {
   },
 } as const;
 
+function hasMissingCloudiness(chart: PreparedDailyWeatherChart): boolean {
+  const { startMs, endMs, cloudSeries, cloudBridge } = chart;
+
+  if (endMs <= startMs) return false;
+
+  const coveredRanges: { start: number; end: number }[] = [];
+
+  for (const segment of cloudSeries) {
+    if (segment.length < 2) continue;
+
+    coveredRanges.push({
+      start: segment[0].time,
+      end: segment[segment.length - 1].time,
+    });
+  }
+
+  if (cloudBridge) {
+    coveredRanges.push({
+      start: cloudBridge[0].time,
+      end: cloudBridge[1].time,
+    });
+  }
+
+  const visibleRanges = coveredRanges
+    .map((range) => ({
+      start: Math.max(startMs, range.start),
+      end: Math.min(endMs, range.end),
+    }))
+    .filter((range) => range.end > range.start)
+    .sort((a, b) => a.start - b.start);
+
+  let coveredUntil = startMs;
+
+  for (const range of visibleRanges) {
+    if (range.start > coveredUntil) return true;
+
+    coveredUntil = Math.max(coveredUntil, range.end);
+
+    if (coveredUntil >= endMs) return false;
+  }
+
+  return coveredUntil < endMs;
+}
+
 export default function DailyWeatherDataStatus({
   data,
   selectedDate,
   timeZone,
   locale,
   chart,
+  cloudVisible,
 }: Props) {
   const t = messages[locale];
   const { start, end } = localDayRange(selectedDate, timeZone);
@@ -191,18 +238,25 @@ export default function DailyWeatherDataStatus({
       locale,
     }),
   );
+
+    const showCloudinessNotice =
+    cloudVisible && hasMissingCloudiness(chart);
+
+    const uniqueNotices = [...new Set(notices)];
+    const noticeCount =
+      uniqueNotices.length + (showCloudinessNotice ? 1 : 0);
   
     return (
     <div>
-      {notices.length > 0 && (
-        <details style={{ marginTop: "0.5rem" }}>
+      {noticeCount > 0 && (
+        <details className={styles.dataAvailability}>
           <summary
             style={{
               cursor: "pointer",
               fontWeight: 600,
             }}
           >
-            {t.title} ({notices.length})
+            {t.title} ({noticeCount})
             <svg
               width="18"
               height="18"
@@ -243,11 +297,17 @@ export default function DailyWeatherDataStatus({
               paddingInlineStart: "1.25rem",
             }}
           >
-            {notices.map((notice) => (
+            {uniqueNotices.map((notice) => (
               <li key={notice}>{notice}</li>
             ))}
           </ul>
-            <p style={{ margin: "0.4rem 0 0", paddingInlineStart: "1.25rem" }}>
+            {showCloudinessNotice && (
+          <p
+            style={{
+              margin: "0.4rem 0 0",
+              paddingInlineStart: "1.25rem",
+            }}
+          >
             <span
               aria-hidden="true"
               style={{
@@ -266,7 +326,8 @@ export default function DailyWeatherDataStatus({
               ? "Pilvisyystietoja ei saatavilla."
               : "Cloudiness data unavailable."}
           </p>
-        </details>
+        )}
+      </details>
       )}
     </div>
   );
