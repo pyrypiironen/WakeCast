@@ -22,6 +22,36 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
   const panelId = useId();
   const t = translations[locale].currentConditions;
   const current = useMemo(() => prepareCurrentConditions(data, new Date(nowMs), timeZone), [data, nowMs, timeZone]);
+    const weatherStation =
+    data.observations.status === "ok"
+      ? data.observations.data.station_name.trim() || t.unavailable
+      : t.unavailable;
+
+  const waterStation =
+    data.water.status === "ok"
+      ? data.water.data.observation_location.trim() || t.unavailable
+      : t.unavailable;
+
+  const forecastLocation =
+    data.forecasts.status === "ok"
+      ? data.forecasts.data.forecast_location.trim() || t.unavailable
+      : t.unavailable;
+
+  const forecastStart = current.forecast
+    ? Date.parse(current.forecast.timestamp)
+    : null;
+
+  const forecastInterval =
+    forecastStart !== null
+      ? formatCurrentInterval(
+          {
+            start: forecastStart,
+            end: forecastStart + 3_600_000,
+          },
+          timeZone,
+          locale,
+        )
+      : t.unavailable;
   const rows = [
     { key: "temperature", icon: "🌡️", format: formatTemperature },
     { key: "water", icon: "🌊", format: formatTemperature },
@@ -58,7 +88,123 @@ export default function CurrentConditions({ data, nowMs, locale, timeZone, refre
       {refreshFailed && <p className={styles.warning} role="status">{t.refreshFailed}</p>}
       <div className={styles.layout}>
         <div id={panelId}>
-          {view === "detailed" ? <p>{t.detailedPlaceholder}</p> : (
+          {view === "detailed" ? (
+            <table className={styles.detailsTable}>
+              <caption className={styles.srOnly}>
+                {t.detailedCaption}
+              </caption>
+
+              <thead>
+                <tr>
+                  <th scope="col">{t.measurement}</th>
+
+                  <th scope="col">
+                    {t.observations}
+                    <span className={styles.columnMeta}>
+                      {weatherStation}
+                    </span>
+                    <span className={styles.columnMeta}>
+                      *{waterStation}
+                    </span>
+                  </th>
+
+                  <th scope="col">
+                    {t.forecastForNow}
+                    <span
+                      className={styles.columnMeta}
+                      title={t.forecastLocation}
+                    >
+                      {forecastLocation}
+                    </span>
+                    <span className={styles.columnMeta}>
+                      {forecastInterval}
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+
+                <tbody>
+                {rows.map(({ key, icon, format }) => {
+                  const reading = current[key];
+                  const provenance = description(reading);
+
+                  const observationValue =
+                    key === "probability" ? null : reading.value;
+
+                  const label = `${t[key]}${
+                    reading.interval
+                      ? ` ${formatCurrentInterval(
+                          reading.interval,
+                          timeZone,
+                          locale,
+                        )}`
+                      : ""
+                  }`;
+                  const showWaterAsterisk =
+                    key === "water" && reading.value !== null;
+                  const forecastValue =
+                    key === "temperature"
+                      ? current.forecast?.temperature ?? null
+                      : key === "wind"
+                        ? current.forecast?.wind_speed ?? null
+                        : key === "gust"
+                          ? current.forecast?.wind_gust ?? null
+                          : key === "cloud"
+                            ? current.forecast?.cloudiness ?? null
+                            : key === "probability"
+                              ? current.probability.value
+                              : null;
+
+                  const forecastProvenance = description({
+                    ...current.probability,
+                    value: forecastValue,
+                  });
+
+                  return (
+                    <tr key={key} data-detailed-condition={key}>
+                      <th scope="row">
+                        <span aria-hidden="true">{icon}</span>{" "}
+                        {label}
+                      </th>
+
+                      <td
+                        title={
+                          key === "probability" ? undefined : provenance
+                        }
+                      >
+                        <span className={styles.measurementValue}>
+                          {format(observationValue, locale)}
+                          {showWaterAsterisk && "*"}
+                        </span>
+                        {key !== "probability" && (
+                          <span className={styles.srOnly}>
+                            {" — "}{provenance}
+                          </span>
+                        )}
+                      </td>
+
+                      <td
+                        title={
+                          key === "water" || key === "rain"
+                            ? undefined
+                            : forecastProvenance
+                        }
+                      >
+                        <span className={styles.measurementValue}>
+                          {format(forecastValue, locale)}
+                        </span>
+                          {key !== "water" && key !== "rain" && (
+                          <span className={styles.srOnly}>
+                            {" — "}{forecastProvenance}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
             <dl className={styles.summary}>
               {rows.map(({ key, icon, format }) => {
                 const reading = current[key];

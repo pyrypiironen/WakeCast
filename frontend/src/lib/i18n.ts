@@ -37,6 +37,13 @@ export const translations = {
       measured: "Measured",
       forecast: "Forecast",
       retrieved: "Retrieved",
+      measurement: "Measurement",
+      observations: "Observations",
+      forecastForNow: "Forecast for now",
+      forecastLocation: "Forecast location",
+      detailedCaption: "Latest measurements and the current-hour forecast",
+      waterStationExplanation:
+        "Water-temperature station: {waterStation}. Weather-observation station: {weatherStation}.",
       refreshFailed: "Some data could not be refreshed. Previously loaded readings are shown with their original timestamps.",
     },
     dailyForecast: {
@@ -146,6 +153,13 @@ export const translations = {
       measured: "Mitattu",
       forecast: "Ennuste",
       retrieved: "Haettu",
+      measurement: "Suure",
+      observations: "Havainnot",
+      forecastForNow: "Ennuste nykyiselle tunnille",
+      forecastLocation: "Ennustepaikka",
+      detailedCaption: "Viimeisimmät mittaukset ja nykyisen tunnin ennuste",
+      waterStationExplanation:
+        "Veden lämpötilan mittausasema: {waterStation}. Säähavaintoasema: {weatherStation}.",
       refreshFailed: "Kaikkia tietoja ei voitu päivittää. Aiemmin ladatut havainnot näytetään alkuperäisine aikaleimoineen.",
     },
     dailyForecast: {
