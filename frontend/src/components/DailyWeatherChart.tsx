@@ -67,6 +67,7 @@ export default function DailyWeatherChart(
           timeZone={timeZone}
           locale={locale}
           chart={chart}
+          cloudVisible={visibility.cloud}
         />
 
         {sourceChanges.map((gap, index) => (

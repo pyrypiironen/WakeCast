@@ -118,7 +118,7 @@
   min-height: 44px;
   padding: 4px 8px;
   color: var(--color-muted);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -188,7 +188,7 @@
   background: transparent;
   color: var(--color-text);
   cursor: pointer;
-  transform: translateY(-6px);
+  transform: translateY(0px);
 }
 
 /* Hide entry on wide screens with a mouse-style primary pointer. */
@@ -406,4 +406,16 @@
 
 .refreshStatus[aria-busy="true"] svg {
   animation: none;
+}
+
+/* "Forecast updated x min ago" row layout on portrait  */
+@media (max-width: 760px) {
+  .header {
+    row-gap: 0;
+  }
+
+  .refreshStatus {
+    min-height: 24px;
+    padding: 0 8px;
+  }
 }

@@ -1,6 +1,7 @@
 import { localDayRange, parseTimestamp } from "@/lib/date";
 import type { DailyWeatherData, WeatherDataResult } from "@/lib/daily-weather";
 import { translations, type Locale } from "@/lib/i18n";
+import styles from "./DailyWeatherChart.module.css";
 
 interface DailyWeatherAvailabilityProps {
   data: DailyWeatherData;
@@ -97,11 +98,7 @@ export default function DailyWeatherAvailability({
   );
 
   return (
-    <p
-      className="text-sm"
-      style={{ color: "var(--color-muted)" }}
-      aria-live="polite"
-    >
+    <p className={styles.sourceInformation} aria-live="polite">
       {t.forecasts}: {forecastSource}
       {" — "}
       {t.observations}: {observationSource}

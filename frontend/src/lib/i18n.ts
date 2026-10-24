@@ -18,6 +18,41 @@ export const translations = {
     parksUnavailable:
       "Wakeparks are currently unavailable. Please try again later.",
     noParks: "No wakeparks available.",
+    currentConditions: {
+      simple: "Simple",
+      detailed: "Detailed",
+      view: "Current conditions view",
+      detailedPlaceholder: "Detailed current conditions are not available yet.",
+      temperature: "Air temperature",
+      water: "Water temperature",
+      wind: "Wind",
+      gust: "Gusts",
+      cloud: "Cloudiness",
+      rain: "Rain",
+      probability: "Rain probability",
+      unavailable: "Unavailable",
+      loadError: "Could not load data",
+      delayed: "Updates delayed",
+      earlier: "Latest available measurement; newer readings are missing",
+      measured: "Measured",
+      forecast: "Forecast",
+      retrieved: "Retrieved",
+      dataSources: "Data sources",
+            waterObservationLocation:
+        "Water temperature observations from {location}.",
+      waterObservationLocationUnavailable:
+        "Water-temperature observation location is unavailable.",
+      forecastScope:
+        "No water-temperature forecast is available. Forecast rain amounts are not shown in this view. Rain probability is forecast-only.",
+      measurement: "Measurement",
+      observations: "Observations",
+      forecastForNow: "Forecast",
+      forecastLocation: "Forecast location",
+      detailedCaption: "Latest measurements and the current-hour forecast",
+      waterStationExplanation:
+        "Water-temperature station: {waterStation}. Weather-observation station: {weatherStation}.",
+      refreshFailed: "Some data could not be refreshed. Previously loaded readings are shown with their original timestamps.",
+    },
     dailyForecast: {
       today: "Today",
       previousDay: "Previous day",
@@ -106,6 +141,41 @@ export const translations = {
     parksUnavailable:
       "Wakeparkkeja ei voida juuri nyt hakea. Yritä myöhemmin uudelleen.",
     noParks: "Ei saatavilla olevia wakeparkkeja.",
+    currentConditions: {
+      simple: "Yksinkertainen",
+      detailed: "Tarkka",
+      view: "Nykyisten olosuhteiden näkymä",
+      detailedPlaceholder: "Tarkka olosuhdenäkymä ei ole vielä käytettävissä.",
+      temperature: "Ilman lämpötila",
+      water: "Veden lämpötila",
+      wind: "Tuuli",
+      gust: "Puuskat",
+      cloud: "Pilvisyys",
+      rain: "Sade",
+      probability: "Sateen todennäköisyys",
+      unavailable: "Ei saatavilla",
+      loadError: "Tietojen lataus epäonnistui",
+      delayed: "Päivitykset viivästyneet",
+      earlier: "Viimeisin saatavilla oleva mittaus; uudemmat havainnot puuttuvat",
+      measured: "Mitattu",
+      forecast: "Ennuste",
+      retrieved: "Haettu",
+      dataSources: "Tietolähteet",
+      waterObservationLocation:
+        "Veden lämpötilahavainnot: {location}.",
+      waterObservationLocationUnavailable:
+        "Veden lämpötilan havaintopaikka ei ole saatavilla.",
+      forecastScope:
+        "Veden lämpötilaennustetta ei ole saatavilla. Ennustettuja sademääriä ei näytetä tässä näkymässä. Sateen todennäköisyys on vain ennustetieto.",
+      measurement: "Suure",
+      observations: "Havainnot",
+      forecastForNow: "Ennuste",
+      forecastLocation: "Ennustepaikka",
+      detailedCaption: "Viimeisimmät mittaukset ja nykyisen tunnin ennuste",
+      waterStationExplanation:
+        "Veden lämpötilan mittausasema: {waterStation}. Säähavaintoasema: {weatherStation}.",
+      refreshFailed: "Kaikkia tietoja ei voitu päivittää. Aiemmin ladatut havainnot näytetään alkuperäisine aikaleimoineen.",
+    },
     dailyForecast: {
       today: "Tänään",
       previousDay: "Edellinen päivä",
@@ -171,7 +241,7 @@ export const translations = {
       noCables: "Tämän puiston kaapelitietoja ei ole saatavilla.",
       inactive:
         "Puisto on merkitty epäaktiiviseksi. Tarkista ajantasainen saatavuus puiston verkkosivuilta.",
-      current: "Nykyiset olosuhteet",
+      current: "Olosuhteet nyt",
       daily: "Päivän sää",
       weekly: "Viikkoennuste",
       detailed: "Tarkat säätiedot",
@@ -185,3 +255,4 @@ export const translations = {
     },
   },
 };
+

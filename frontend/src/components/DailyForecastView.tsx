@@ -6,6 +6,8 @@ import { refreshDailyWeather } from "@/app/actions/refresh-daily-weather";
 import { addCalendarDays, localDayRange } from "@/lib/date";
 import { translations, type Locale } from "@/lib/i18n";
 import DailyWeatherChart from "./DailyWeatherChart";
+import CurrentConditions from "./CurrentConditions";
+import parkStyles from "./ParkDetails.module.css";
 import type { DailyWeatherData } from "@/lib/daily-weather";
 import styles from "./DailyForecast.module.css";
 import { defaultChartWindow, type ChartWindow } from "@/lib/chart-window";
@@ -15,6 +17,7 @@ interface DailyForecastViewProps {
   locale: Locale;
   timeZone: string;
   data: DailyWeatherData;
+  includeCurrentConditions?: boolean;
 }
 
 const REFRESH_INTERVAL_MS = 60_000;
@@ -24,6 +27,7 @@ export default function DailyForecastView({
   locale,
   timeZone,
   data,
+  includeCurrentConditions = false,
 }: DailyForecastViewProps) {
 
 const [liveData, setLiveData] = useState(data);
@@ -396,7 +400,7 @@ const freshnessLabel =
     });
   }
 
-  return (
+  const chartView = (
       <div
         ref={fullscreenRef}
         role={isFullscreen ? "dialog" : undefined}
@@ -593,5 +597,30 @@ const freshnessLabel =
         fullscreen={isFullscreen}
       />
     </div>
+  );
+
+  if (!includeCurrentConditions) return chartView;
+
+  return (
+    <>
+      <section
+        className={`${parkStyles.placeholder} ${parkStyles.dailyForecast}`}
+        aria-labelledby="current-conditions"
+      >
+        <CurrentConditions
+          data={liveData}
+          nowMs={nowMs}
+          locale={locale}
+          timeZone={timeZone}
+          refreshFailed={refreshFailed}
+        />
+      </section>
+      <section
+        className={`${parkStyles.placeholder} ${parkStyles.dailyForecast}`}
+        aria-labelledby="daily-forecast"
+      >
+        {chartView}
+      </section>
+    </>
   );
 }
